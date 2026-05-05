@@ -1,0 +1,136 @@
+--- a/src/components/game/GameUtils.jsx	2026-04-27 19:47:32.000000000 +0000
++++ b/src/components/game/GameUtils.jsx	2026-04-28 12:32:07.158517113 +0000
+@@ -1,17 +1,60 @@
+ // XP & Leveling System
+-export const XP_PER_LEVEL = 500;
+ export const MAX_LEVEL = 50;
+ 
++/**
++ * Returns the total XP required to reach a given level.
++ * Level thresholds:
++ *   Levels 1-10:  XP per level increases by 50 starting at 50
++ *                 (50, 100, 150, 200, 250, 300, 350, 400, 450, 500)
++ *   Levels 11-20: increases by 100 (600, 700, 800, ...)
++ *   Levels 21-30: increases by 150 (1150, 1300, 1450, ...)
++ *   Levels 31-40: increases by 200 ...
++ *   Levels 41-50: increases by 250 ...
++ */
++export function getXPRequiredForLevel(level) {
++  if (level <= 1) return 0;
++  let total = 0;
++  for (let l = 1; l < level; l++) {
++    total += getXPForLevelStep(l);
++  }
++  return total;
++}
++
++/** XP needed to go from level l to level l+1 */
++function getXPForLevelStep(l) {
++  // Group of 10 levels determines the increment (+50 per group)
++  const group = Math.floor((l - 1) / 10); // 0-indexed group
++  const posInGroup = ((l - 1) % 10) + 1;  // 1–10 within group
++  const baseIncrement = 50 * (group + 1);  // 50 for group 0, 100 for group 1, etc.
++  return baseIncrement * posInGroup;
++}
++
+ export function getLevelFromXP(xp) {
+-  return Math.min(Math.floor((xp || 0) / XP_PER_LEVEL) + 1, MAX_LEVEL);
++  const totalXP = xp || 0;
++  let level = 1;
++  while (level < MAX_LEVEL && totalXP >= getXPRequiredForLevel(level + 1)) {
++    level++;
++  }
++  return level;
+ }
+ 
+ export function getXPForCurrentLevel(xp) {
+-  return (xp || 0) % XP_PER_LEVEL;
++  const level = getLevelFromXP(xp);
++  return (xp || 0) - getXPRequiredForLevel(level);
++}
++
++export function getXPToNextLevel(xp) {
++  const level = getLevelFromXP(xp);
++  if (level >= MAX_LEVEL) return 0;
++  return getXPRequiredForLevel(level + 1) - getXPRequiredForLevel(level);
+ }
+ 
+ export function getXPProgress(xp) {
+-  return ((xp || 0) % XP_PER_LEVEL) / XP_PER_LEVEL * 100;
++  const level = getLevelFromXP(xp);
++  if (level >= MAX_LEVEL) return 100;
++  const current = getXPForCurrentLevel(xp);
++  const needed = getXPToNextLevel(xp);
++  return (current / needed) * 100;
+ }
+ 
+ export function getRankTitle(level) {
+@@ -40,8 +83,8 @@
+   STAY_UNDER_BUDGET:  50,
+   DAILY_LOGIN:         5,
+   WIN_CHALLENGE:     100,
+-  WIN_RUSH:      1000000,   // Challenge Rush win = 1,000,000 XP
+-  COMPLETE_CHALLENGE: 50,
++  WIN_RUSH:          100,  // Challenge Rush win = 100 XP (same as winning a challenge)
++  COMPLETE_CHALLENGE: 100,
+   SAVE_10_PERCENT:    30,
+   SAVE_20_PERCENT:    60,
+   FIRST_TRANSACTION:  25,
+--- a/src/components/game/XPBar.jsx	2026-04-26 04:16:59.000000000 +0000
++++ b/src/components/game/XPBar.jsx	2026-04-28 12:32:07.162517113 +0000
+@@ -1,16 +1,17 @@
+ import React from 'react';
+-import { getXPForCurrentLevel, XP_PER_LEVEL, getXPProgress } from './GameUtils';
++import { getXPForCurrentLevel, getXPToNextLevel, getXPProgress } from './GameUtils';
+ import { motion } from 'framer-motion';
+ 
+ export default function XPBar({ xp }) {
+   const current = getXPForCurrentLevel(xp);
++  const needed  = getXPToNextLevel(xp);
+   const progress = getXPProgress(xp);
+ 
+   return (
+     <div className="space-y-1">
+       <div className="flex justify-between text-xs text-muted-foreground">
+         <span>{current} XP</span>
+-        <span>{XP_PER_LEVEL} XP</span>
++        <span>{needed} XP</span>
+       </div>
+       <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+         <motion.div 
+@@ -22,4 +23,4 @@
+       </div>
+     </div>
+   );
+-}
+\ No newline at end of file
++}
+--- a/src/pages/Challenges.jsx	2026-04-27 19:47:32.000000000 +0000
++++ b/src/pages/Challenges.jsx	2026-04-28 12:32:07.167517113 +0000
+@@ -1,7 +1,7 @@
+ import React, { useState, useEffect } from 'react';
+ import { useLocation } from 'react-router-dom';
+ import { auth, entities, profilesApi, notificationsApi, friendsApi, supabase } from '@/api/supabaseClient';
+-import { XP_ACTIONS } from '@/components/game/GameUtils';
++import { XP_ACTIONS, getLevelFromXP } from '@/components/game/GameUtils';
+ import { useQuery, useQueryClient } from '@tanstack/react-query';
+ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+ import { Button } from '@/components/ui/button';
+@@ -387,7 +387,7 @@
+         const profile = await profilesApi.getByUserId(user.id);
+         if (profile) {
+           const newXP     = (profile.xp || 0) + XP_ACTIONS.WIN_RUSH;
+-          const newLevel  = Math.min(Math.floor(newXP / 500) + 1, 50);
++          const newLevel  = getLevelFromXP(newXP);
+           const badges    = [...(profile.badges || [])];
+           if (!badges.includes('godly')) badges.push('godly');
+           if (!badges.includes('clash_winner')) badges.push('clash_winner');
+@@ -405,7 +405,7 @@
+     queryClient.invalidateQueries({ queryKey: ['challenges'] });
+ 
+     if (isWinner) {
+-      toast.success('🏆 GODLY! You finished all 10 tasks — 1,000,000 XP awarded!');
++      toast.success('🏆 GODLY! You finished all 10 tasks — +100 XP awarded!');
+     } else if (!alreadyDone) {
+       toast.success(`Task marked complete! ${myDoneCount}/${tasks.length} done`);
+     }

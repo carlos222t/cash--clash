@@ -1,0 +1,142 @@
+--- a/src/pages/Login.jsx	2026-05-02 16:45:25.629957212 +0000
++++ b/src/pages/Login.jsx	2026-05-02 16:45:29.368200786 +0000
+@@ -67,7 +67,7 @@
+             currency: REGIONS.find(r => r.value === region)?.currency || 'USD',
+             currency_symbol: REGIONS.find(r => r.value === region)?.symbol || '$',
+             level: 1, xp: 0, total_saved: 0, monthly_budget: 0,
+-            monthly_income: 0, badges: [], streak_days: 0, role: 'student',
++            monthly_income: 0, badges: [], streak_days: 0,
+             battles_won: 0, tournament_wins: 0,
+           }]);
+         }
+--- a/src/pages/Settings.jsx	2026-05-02 16:45:25.633585080 +0000
++++ b/src/pages/Settings.jsx	2026-05-02 16:45:43.337027472 +0000
+@@ -141,7 +141,7 @@
+         await entities.UserProfile.create({
+           ...updateData, created_by: user?.id,
+           level: 1, xp: 0, total_saved: 0, monthly_budget: 0,
+-          monthly_income: 0, badges: [], streak_days: 0, role: 'student',
++          monthly_income: 0, badges: [], streak_days: 0,
+           battles_won: 0, tournament_wins: 0,
+         });
+       }
+@@ -388,10 +388,6 @@
+                   <span className="text-sm text-muted-foreground">Username</span>
+                   <span className="text-sm font-medium">{profile?.username ? `@${profile.username}` : '—'}</span>
+                 </div>
+-                <div className="flex justify-between py-2 border-b border-border">
+-                  <span className="text-sm text-muted-foreground">Role</span>
+-                  <span className="text-sm font-medium capitalize">{profile?.role || 'student'}</span>
+-                </div>
+                 <div className="flex justify-between py-2">
+                   <span className="text-sm text-muted-foreground">Battles Won</span>
+                   <span className="text-sm font-medium">{profile?.battles_won || 0}</span>
+--- a/src/pages/Budget.jsx	2026-05-02 16:45:25.638019096 +0000
++++ b/src/pages/Budget.jsx	2026-05-02 16:45:46.110947924 +0000
+@@ -49,7 +49,7 @@
+       display_name: user?.full_name || 'Player',
+       created_by: user?.id,
+       level: 1, xp: 0, total_saved: 0, monthly_budget: 0, monthly_income: 0,
+-      badges: [], streak_days: 0, role: 'student',
++      badges: [], streak_days: 0,
+     });
+     queryClient.invalidateQueries({ queryKey: ['profile'] });
+     return created;
+--- a/src/pages/Proposals.jsx	2026-05-02 16:45:25.640490081 +0000
++++ b/src/pages/Proposals.jsx	2026-05-02 16:46:10.833931867 +0000
+@@ -19,7 +19,7 @@
+   const [dialogOpen, setDialogOpen] = useState(false);
+   const [reviewDialog, setReviewDialog] = useState(null);
+   const [feedback, setFeedback] = useState('');
+-  const [form, setForm] = useState({ title: '', description: '', monthly_income: '', savings_goal: '', teacher_email: '' });
++  const [form, setForm] = useState({ title: '', description: '', monthly_income: '', savings_goal: '', reviewer_email: '' });
+   const queryClient = useQueryClient();
+ 
+   useEffect(() => { auth.me().then(setUser).catch(() => {}); }, []);
+@@ -39,7 +39,6 @@
+   });
+ 
+   const profile = profiles?.[0];
+-  const isTeacher = profile?.role === 'teacher';
+   const myProposals = proposals.filter(p => p.student_email === user?.email);
+   const reviewProposals = proposals.filter(p => p.teacher_email === user?.email);
+ 
+@@ -50,11 +49,12 @@
+       savings_goal: parseFloat(form.savings_goal) || 0,
+       student_email: user.email,
+       student_name: user.full_name,
++      teacher_email: form.reviewer_email,
+       status: 'pending',
+     });
+     queryClient.invalidateQueries({ queryKey: ['proposals'] });
+     setDialogOpen(false);
+-    setForm({ title: '', description: '', monthly_income: '', savings_goal: '', teacher_email: '' });
++    setForm({ title: '', description: '', monthly_income: '', savings_goal: '', reviewer_email: '' });
+     toast.success('Proposal submitted!');
+   };
+ 
+@@ -106,7 +106,7 @@
+         </div>
+         {proposal.feedback && (
+           <div className="bg-accent/5 border border-accent/20 rounded-lg p-3">
+-            <p className="text-xs font-semibold text-accent mb-1">Teacher Feedback</p>
++            <p className="text-xs font-semibold text-accent mb-1">Feedback</p>
+             <p className="text-sm">{proposal.feedback}</p>
+           </div>
+         )}
+@@ -126,7 +126,7 @@
+           <h1 className="text-2xl font-heading font-bold flex items-center gap-2">
+             <FileText className="w-6 h-6 text-primary" /> Proposals
+           </h1>
+-          <p className="text-sm text-muted-foreground mt-1">Submit budget plans for teacher review</p>
++          <p className="text-sm text-muted-foreground mt-1">Submit budget plans for peer review</p>
+         </div>
+         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+           <DialogTrigger asChild>
+@@ -156,8 +156,8 @@
+                 </div>
+               </div>
+               <div>
+-                <Label className="text-xs">Teacher's Email</Label>
+-                <Input type="email" placeholder="teacher@school.edu" value={form.teacher_email} onChange={e => setForm({ ...form, teacher_email: e.target.value })} />
++                <Label className="text-xs">Reviewer's Email</Label>
++                <Input type="email" placeholder="reviewer@example.com" value={form.reviewer_email} onChange={e => setForm({ ...form, reviewer_email: e.target.value })} />
+               </div>
+               <Button onClick={handleSubmit} className="w-full gap-2">
+                 <Send className="w-4 h-4" /> Submit Proposal
+--- a/src/App.jsx	2026-05-02 16:45:25.644427000 +0000
++++ b/src/App.jsx	2026-05-02 16:46:17.346780924 +0000
+@@ -12,7 +12,6 @@
+ import Budget from './pages/Budget';
+ import Challenges from './pages/Challenges';
+ import Badges from './pages/Badges';
+-import Proposals from './pages/Proposals';
+ import Settings from './pages/Settings';
+ import Login from './pages/Login';
+ import Friends from './pages/Friends';
+@@ -46,7 +45,6 @@
+           <Route path="/Budget"      element={<Budget />} />
+           <Route path="/Challenges"  element={<Challenges />} />
+           <Route path="/Badges"      element={<Badges />} />
+-          <Route path="/Proposals"   element={<Proposals />} />
+           <Route path="/Settings"    element={<Settings />} />
+           <Route path="/Friends"     element={<Friends />} />
+           <Route path="/Inbox"       element={<Inbox />} />
+--- a/src/components/layout/Sidebar.jsx	2026-05-02 16:45:25.647270936 +0000
++++ b/src/components/layout/Sidebar.jsx	2026-05-02 16:46:47.122274833 +0000
+@@ -1,6 +1,6 @@
+ import React from 'react';
+ import { Link, useLocation } from 'react-router-dom';
+-import { LayoutDashboard, Wallet, Swords, Trophy, FileText, Settings, ChevronLeft, ChevronRight, LogOut, Zap, Users, Bell, Star, BookOpen, Target, Shield } from 'lucide-react';
++import { LayoutDashboard, Wallet, Swords, Trophy, Settings, ChevronLeft, ChevronRight, LogOut, Zap, Users, Bell, Star, BookOpen, Target, Shield } from 'lucide-react';
+ import { motion } from 'framer-motion';
+ import { useAuth } from '@/lib/AuthContext';
+ import { useQuery } from '@tanstack/react-query';
+@@ -22,7 +22,6 @@
+   { path: '/Badges', icon: Star, label: 'Badges', tutorialId: 'nav-badges' },
+   { path: '/Goals',     icon: Target,   label: 'Goals',     tutorialId: null },
+   { path: '/Clans',     icon: Shield,   label: 'Clans',     tutorialId: null },
+-  { path: '/Proposals', icon: FileText, label: 'Proposals', tutorialId: null },
+ ];
+ 
+ export default function Sidebar({ collapsed, setCollapsed }) {

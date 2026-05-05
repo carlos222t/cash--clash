@@ -1,0 +1,152 @@
+import React, { useState, useEffect } from 'react';
+import { auth, entities } from '@/api/supabaseClient';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent } from '@/components/ui/card';
+import { ALL_BADGES, getUnlockedBadges, getLockedBadges, getLevelFromXP, getRankTitle, getRankColor } from '../components/game/GameUtils';
+import LevelBadge from '../components/game/LevelBadge';
+import XPBar from '../components/game/XPBar';
+import { Trophy, Lock, Sparkles } from 'lucide-react';
+
+const RANK_IMGS = [
+  { minLevel: 40, img: '/badges/cashlegend.png'   },
+  { minLevel: 30, img: '/badges/moneymaster.png'  },
+  { minLevel: 20, img: '/badges/budgetboss.png'   },
+  { minLevel: 15, img: '/badges/savingspro.png'   },
+  { minLevel: 10, img: '/badges/smartspender.png' },
+  { minLevel: 5,  img: '/badges/pennypincher.png' },
+  { minLevel: 1,  img: '/badges/rookie_saver.png' },
+];
+function getRankImg(level) {
+  return (RANK_IMGS.find(r => level >= r.minLevel) || RANK_IMGS[RANK_IMGS.length - 1]).img;
+}
+import { motion } from 'framer-motion';
+
+export default function Badges() {
+  const [user, setUser] = useState(null);
+  const [pfpZoom, setPfpZoom] = useState(false);
+  useEffect(() => { auth.me().then(setUser).catch(() => {}); }, []);
+
+  const { data: profiles } = useQuery({
+    queryKey: ['profile'],
+    queryFn: () => entities.UserProfile.filter({ created_by: user?.id }),
+    enabled: !!user?.id,
+    initialData: [],
+  });
+
+  const profile = profiles?.[0];
+  const xp = profile?.xp || 0;
+  const earnedIds = profile?.badges || [];
+  const unlocked = getUnlockedBadges(earnedIds);
+  const locked = getLockedBadges(earnedIds);
+  const level = getLevelFromXP(xp);
+
+  const RANKS = [
+    { name: 'Rookie Saver',  minLevel: 1,  img: '/badges/rookie_saver.png'  },
+    { name: 'Penny Pincher', minLevel: 5,  img: '/badges/pennypincher.png'  },
+    { name: 'Smart Spender', minLevel: 10, img: '/badges/smartspender.png'  },
+    { name: 'Savings Pro',   minLevel: 15, img: '/badges/savingspro.png'    },
+    { name: 'Budget Boss',   minLevel: 20, img: '/badges/budgetboss.png'    },
+    { name: 'Money Master',  minLevel: 30, img: '/badges/moneymaster.png'   },
+    { name: 'Cash Legend',   minLevel: 40, img: '/badges/cashlegend.png'    },
+  ];
+
+  return (
+    <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-8">
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+        <Card className="overflow-hidden">
+          <div className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 p-6 flex flex-col sm:flex-row items-center gap-6">
+            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primary/30 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setPfpZoom(true)}>
+              {profile?.custom_avatar_url
+                ? <img src={profile.custom_avatar_url} alt="pfp" className="w-full h-full object-cover" />
+                : <div className="w-full h-full bg-primary/15 flex items-center justify-center" style={{ fontSize: 22, fontWeight: 700, color: '#B8973A' }}>{(profile?.display_name || 'P')[0].toUpperCase()}</div>
+              }
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <div className="flex items-center gap-2 justify-center sm:justify-start">
+                <h1 className="text-2xl font-heading font-bold">{profile?.display_name || 'Player'}</h1>
+                <img src={getRankImg(level)} alt="rank" className="w-8 h-8 rounded-full object-cover" />
+              </div>
+              <p className="text-muted-foreground text-sm">Level {level} · {getRankTitle(level)}</p>
+              <div className="mt-3 max-w-sm"><XPBar xp={xp} /></div>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl font-heading font-bold text-accent">{unlocked.length}</p>
+              <p className="text-xs text-muted-foreground">of {ALL_BADGES.length} badges</p>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+
+      <div>
+        <h2 className="font-heading font-semibold text-lg mb-4 flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-chart-3" /> Rank Tiers
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          {RANKS.map(rank => {
+            const achieved = level >= rank.minLevel;
+            const isCurrent = achieved && (rank.minLevel === Math.max(...RANKS.filter(r => level >= r.minLevel).map(r => r.minLevel)));
+            return (
+              <div key={rank.name} className={`text-center p-3 rounded-xl border transition-all ${isCurrent ? 'border-primary bg-primary/10 shadow-lg scale-105' : achieved ? 'border-primary/30 bg-card shadow-sm' : 'border-border/50 bg-muted/30 opacity-50'}`}>
+                <div className={isCurrent ? 'rank-pulse' : ''}>
+                  <img src={rank.img} alt={rank.name} className="w-12 h-12 mx-auto mb-2 rounded-full object-cover" style={{ filter: achieved ? 'none' : 'grayscale(1)' }} />
+                </div>
+                <p className={`text-[10px] font-semibold ${isCurrent ? 'text-primary' : ''}`}>{rank.name}</p>
+                {isCurrent && <p className="text-[9px] text-primary font-bold mt-0.5">CURRENT</p>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="font-heading font-semibold text-lg mb-4 flex items-center gap-2">
+          <Trophy className="w-5 h-5 text-primary" /> Earned Badges ({unlocked.length})
+        </h2>
+        {unlocked.length === 0 ? (
+          <Card className="p-8 text-center">
+            <p className="text-muted-foreground">Start tracking your finances to earn badges!</p>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {unlocked.map((badge, i) => (
+              <motion.div key={badge.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }}>
+                <Card className="p-4 text-center hover:shadow-lg transition-shadow border-primary/20">
+                  <span className="text-4xl block">{badge.icon}</span>
+                  <p className="font-heading font-semibold text-sm mt-2">{badge.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{badge.description}</p>
+                  {badge.xpReward > 0 && <p className="text-[10px] text-primary font-semibold mt-2">+{badge.xpReward} XP</p>}
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h2 className="font-heading font-semibold text-lg mb-4 flex items-center gap-2">
+          <Lock className="w-5 h-5 text-muted-foreground" /> Locked ({locked.length})
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {locked.map(badge => (
+            <Card key={badge.id} className="p-4 text-center opacity-50 grayscale">
+              <span className="text-4xl block">{badge.icon}</span>
+              <p className="font-heading font-semibold text-sm mt-2">{badge.name}</p>
+              <p className="text-xs text-muted-foreground mt-1">{badge.description}</p>
+              {badge.xpReward > 0 && <p className="text-[10px] text-muted-foreground font-semibold mt-2">+{badge.xpReward} XP</p>}
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+    {pfpZoom && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setPfpZoom(false)}>
+        <div className="w-72 h-72 rounded-full overflow-hidden border-4 border-primary/50 shadow-2xl" onClick={e => e.stopPropagation()}>
+          {profile?.custom_avatar_url
+            ? <img src={profile.custom_avatar_url} alt="pfp" className="w-full h-full object-cover" />
+            : <div className="w-full h-full bg-primary/15 flex items-center justify-center" style={{ fontSize: 80, fontWeight: 700, color: '#B8973A' }}>{(profile?.display_name || 'P')[0].toUpperCase()}</div>
+          }
+        </div>
+      </div>
+    )}
+  );
+}

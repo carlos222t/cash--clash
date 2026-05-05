@@ -1,0 +1,55 @@
+--- a/src/pages/StockMarket.jsx
++++ b/src/pages/StockMarket.jsx
+@@ -14,7 +14,7 @@
+   'X-RapidAPI-Host': RAPIDAPI_HOST,
+ };
+ 
+-const DEFAULT_SYMBOLS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA', 'JPM', 'V', 'WMT'];
++const DEFAULT_SYMBOLS = ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'META', 'NVDA'];
+ const INDICES = ['^GSPC', '^DJI', '^IXIC'];
+ const INDEX_LABELS = { '^GSPC': 'S&P 500', '^DJI': 'Dow Jones', '^IXIC': 'NASDAQ' };
+ 
+@@ -106,12 +106,10 @@
+     if (isRefresh) setRefreshing(true); else setLoading(true);
+     setError(null);
+     try {
+-      const [stockData, indexData] = await Promise.all([
+-        fetchQuotes(allSymbols),
+-        fetchQuotes(INDICES),
+-      ]);
+-      setStocks(stockData);
+-      setIndices(indexData);
++      // Single request for everything — conserves free-tier quota
++      const all = await fetchQuotes([...INDICES, ...allSymbols]);
++      setIndices(all.filter(q => INDICES.includes(q.symbol)));
++      setStocks(all.filter(q => !INDICES.includes(q.symbol)));
+       setLastUpdated(new Date());
+     } catch (e) {
+       setError(e.message);
+@@ -123,11 +121,12 @@
+ 
+   useEffect(() => { load(); }, [load]);
+ 
+-  // Auto-refresh every 60s
+-  useEffect(() => {
+-    const t = setInterval(() => load(true), 60000);
+-    return () => clearInterval(t);
+-  }, [load]);
++  // Auto-refresh disabled by default to preserve free-tier quota
++  // Uncomment the lines below if you have a paid RapidAPI plan:
++  // useEffect(() => {
++  //   const t = setInterval(() => load(true), 60000);
++  //   return () => clearInterval(t);
++  // }, [load]);
+ 
+   const handleSearch = () => {
+     const sym = searchSymbol.trim().toUpperCase();
+@@ -156,7 +155,7 @@
+           </h1>
+           {lastUpdated && (
+             <p className="text-xs text-muted-foreground mt-0.5">
+-              Updated {lastUpdated.toLocaleTimeString()} · auto-refreshes every 60s
++              Updated {lastUpdated.toLocaleTimeString()} · press Refresh to update
+             </p>
+           )}
+         </div>

@@ -1,0 +1,153 @@
+***************
+*** 1,6 ****
+  import React, { useState, useEffect, useRef } from 'react';
+  import { auth, entities, profilesApi } from '@/api/supabaseClient';
+- import { supabase } from '@/api/supabaseClient';
+  import { useQuery, useQueryClient } from '@tanstack/react-query';
+  import { motion } from 'framer-motion';
+  import { toast } from 'sonner';
+--- 1,6 ----
+  import React, { useState, useEffect, useRef } from 'react';
+  import { auth, entities, profilesApi } from '@/api/supabaseClient';
++ import { supabase, friendsApi } from '@/api/supabaseClient';
+  import { useQuery, useQueryClient } from '@tanstack/react-query';
+  import { motion } from 'framer-motion';
+  import { toast } from 'sonner';
+***************
+*** 11,17 ****
+  import { Badge } from '@/components/ui/badge';
+  import {
+    Settings as SettingsIcon, User, Camera, Save, LogOut,
+-   Shield, Palette, RefreshCw, CheckCircle2, AtSign, Globe, X,
+  } from 'lucide-react';
+  import { useAuth } from '@/lib/AuthContext';
+  
+--- 11,17 ----
+  import { Badge } from '@/components/ui/badge';
+  import {
+    Settings as SettingsIcon, User, Camera, Save, LogOut,
++   Shield, Palette, RefreshCw, CheckCircle2, AtSign, Globe, X, Ban, UserX,
+  } from 'lucide-react';
+  import { useAuth } from '@/lib/AuthContext';
+  
+***************
+*** 46,51 ****
+    { id: 'avatar12', emoji: '🦉', label: 'Owl' },
+  ];
+  
+  export default function Settings() {
+    const [user, setUser] = useState(null);
+    const [displayName, setDisplayName] = useState('');
+--- 46,122 ----
+    { id: 'avatar12', emoji: '🦉', label: 'Owl' },
+  ];
+  
++ function BlockedUsersTab({ userId }) {
++   const [blocked, setBlocked] = React.useState([]);
++   const [loading, setLoading] = React.useState(true);
++ 
++   React.useEffect(() => {
++     if (!userId) return;
++     (async () => {
++       const { data: rows } = await supabase
++         .from('friends')
++         .select('id, requester_id, recipient_id')
++         .or(`requester_id.eq.${userId},recipient_id.eq.${userId}`)
++         .eq('status', 'blocked');
++       if (!rows?.length) { setBlocked([]); setLoading(false); return; }
++       const otherIds = rows.map(r => r.requester_id === userId ? r.recipient_id : r.requester_id);
++       const { data: profiles } = await supabase
++         .from('user_profiles')
++         .select('id, display_name, username')
++         .in('id', otherIds);
++       const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
++       setBlocked(rows.map(r => ({
++         ...r,
++         other: profileMap[r.requester_id === userId ? r.recipient_id : r.requester_id] || {},
++       })));
++       setLoading(false);
++     })();
++   }, [userId]);
++ 
++   const handleUnblock = async (row) => {
++     await friendsApi.remove(row.id);
++     setBlocked(prev => prev.filter(r => r.id !== row.id));
++     toast.success('User unblocked');
++   };
++ 
++   if (loading) return <p className="text-sm text-muted-foreground py-6 text-center">Loading...</p>;
++ 
++   return (
++     <Card>
++       <CardHeader>
++         <CardTitle className="text-base flex items-center gap-2">
++           <UserX className="w-4 h-4 text-primary" /> Blocked Users
++         </CardTitle>
++         <CardDescription>These users cannot interact with you.</CardDescription>
++       </CardHeader>
++       <CardContent>
++         {blocked.length === 0 ? (
++           <p className="text-sm text-muted-foreground py-4 text-center">No blocked users.</p>
++         ) : (
++           <div className="space-y-2">
++             {blocked.map(row => {
++               const name = row.other?.display_name || row.other?.username || 'Unknown';
++               const username = row.other?.username ? `@${row.other.username}` : '';
++               return (
++                 <div key={row.id} className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/30">
++                   <div>
++                     <p className="text-sm font-medium">{name}</p>
++                     <p className="text-xs text-muted-foreground">{username}</p>
++                   </div>
++                   <Button size="sm" variant="outline" onClick={() => handleUnblock(row)}
++                     className="gap-1.5 text-xs h-8">
++                     <X className="w-3 h-3" /> Unblock
++                   </Button>
++                 </div>
++               );
++             })}
++           </div>
++         )}
++       </CardContent>
++     </Card>
++   );
++ }
++ 
+  export default function Settings() {
+    const [user, setUser] = useState(null);
+    const [displayName, setDisplayName] = useState('');
+***************
+*** 203,208 ****
+      { id: 'profile',    label: 'Profile',    icon: User },
+      { id: 'appearance', label: 'Appearance', icon: Palette },
+      { id: 'account',    label: 'Account',    icon: Shield },
+    ];
+  
+    if (isLoading) {
+--- 274,280 ----
+      { id: 'profile',    label: 'Profile',    icon: User },
+      { id: 'appearance', label: 'Appearance', icon: Palette },
+      { id: 'account',    label: 'Account',    icon: Shield },
++     { id: 'blocked',    label: 'Blocked',    icon: Ban },
+    ];
+  
+    if (isLoading) {
+***************
+*** 371,376 ****
+              </div>
+            )}
+  
+            {/* ACCOUNT TAB */}
+            {activeTab === 'account' && (
+              <div className="space-y-4">
+--- 443,452 ----
+              </div>
+            )}
+  
++           {/* BLOCKED TAB */}
++           {activeTab === 'blocked' && (
++             <BlockedUsersTab userId={user?.id} />
++           )}
+            {/* ACCOUNT TAB */}
+            {activeTab === 'account' && (
+              <div className="space-y-4">

@@ -1,0 +1,46 @@
+--- a/src/pages/Badges.jsx	2026-05-05 03:54:05.127021717 +0000
++++ b/src/pages/Badges.jsx	2026-05-05 03:56:35.621710804 +0000
+@@ -23,6 +23,7 @@
+ 
+ export default function Badges() {
+   const [user, setUser] = useState(null);
++  const [pfpZoom, setPfpZoom] = useState(false);
+   useEffect(() => { auth.me().then(setUser).catch(() => {}); }, []);
+ 
+   const { data: profiles } = useQuery({
+@@ -50,11 +51,17 @@
+   ];
+ 
+   return (
++    <>
+     <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-8">
+       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+         <Card className="overflow-hidden">
+           <div className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 p-6 flex flex-col sm:flex-row items-center gap-6">
+-            <LevelBadge xp={xp} size="lg" />
++            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primary/30 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setPfpZoom(true)}>
++              {profile?.custom_avatar_url
++                ? <img src={profile.custom_avatar_url} alt="pfp" className="w-full h-full object-cover" />
++                : <div className="w-full h-full bg-primary/15 flex items-center justify-center" style={{ fontSize: 22, fontWeight: 700, color: '#B8973A' }}>{(profile?.display_name || 'P')[0].toUpperCase()}</div>
++              }
++            </div>
+             <div className="flex-1 text-center sm:text-left">
+               <div className="flex items-center gap-2 justify-center sm:justify-start">
+                 <h1 className="text-2xl font-heading font-bold">{profile?.display_name || 'Player'}</h1>
+@@ -132,5 +139,16 @@
+         </div>
+       </div>
+     </div>
++    {pfpZoom && (
++      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setPfpZoom(false)}>
++        <div className="w-72 h-72 rounded-full overflow-hidden border-4 border-primary/50 shadow-2xl" onClick={e => e.stopPropagation()}>
++          {profile?.custom_avatar_url
++            ? <img src={profile.custom_avatar_url} alt="pfp" className="w-full h-full object-cover" />
++            : <div className="w-full h-full bg-primary/15 flex items-center justify-center" style={{ fontSize: 80, fontWeight: 700, color: '#B8973A' }}>{(profile?.display_name || 'P')[0].toUpperCase()}</div>
++          }
++        </div>
++      </div>
++    )}
++    </>
+   );
+ 

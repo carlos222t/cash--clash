@@ -1,0 +1,406 @@
+--- a/src/pages/Learn.jsx	2026-05-02 20:34:02.000000000 +0000
++++ b/src/pages/Learn.jsx	2026-05-03 23:22:09.394078774 +0000
+@@ -1,4 +1,5 @@
+-<!DOCTYPE html>
++export default function Learn() {
++  const html = `<!DOCTYPE html>
+ <html lang="en">
+ <head>
+   <meta charset="UTF-8">
+@@ -20,16 +21,16 @@
+ 
+     // ─── SHADCN / UI MOCKS INLINE ─────────────────────────────────────────────
+     const Card = ({ className, children, ...props }) => (
+-      <div className={`rounded-xl border bg-card text-card-foreground shadow-sm ${className}`} {...props}>{children}</div>
++      <div className={\`rounded-xl border bg-card text-card-foreground shadow-sm \${className}\`} {...props}>{children}</div>
+     );
+     const CardHeader = ({ className, children, ...props }) => (
+-      <div className={`flex flex-col space-y-1.5 p-6 ${className}`} {...props}>{children}</div>
++      <div className={\`flex flex-col space-y-1.5 p-6 \${className}\`} {...props}>{children}</div>
+     );
+     const CardTitle = ({ className, children, ...props }) => (
+-      <h3 className={`text-2xl font-semibold leading-none tracking-tight ${className}`} {...props}>{children}</h3>
++      <h3 className={\`text-2xl font-semibold leading-none tracking-tight \${className}\`} {...props}>{children}</h3>
+     );
+     const CardContent = ({ className, children, ...props }) => (
+-      <div className={`p-6 pt-0 ${className}`} {...props}>{children}</div>
++      <div className={\`p-6 pt-0 \${className}\`} {...props}>{children}</div>
+     );
+     const Button = ({ className, variant, size, children, ...props }) => {
+       let baseStyle = "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer ";
+@@ -44,12 +45,12 @@
+       if (size === "lg") sizeStyle = "h-11 rounded-md px-8 ";
+       
+       return (
+-        <button className={`${baseStyle} ${variantStyle} ${sizeStyle} ${className}`} {...props}>{children}</button>
++        <button className={\`\${baseStyle} \${variantStyle} \${sizeStyle} \${className}\`} {...props}>{children}</button>
+       );
+     };
+     const Progress = ({ value, className, ...props }) => (
+-      <div className={`relative h-4 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800 ${className}`} {...props}>
+-        <div className="h-full w-full flex-1 bg-slate-900 dark:bg-slate-50 transition-all" style={{ transform: `translateX(-${100 - (value || 0)}%)` }} />
++      <div className={\`relative h-4 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800 \${className}\`} {...props}>
++        <div className="h-full w-full flex-1 bg-slate-900 dark:bg-slate-50 transition-all" style={{ transform: \`translateX(-\${100 - (value || 0)}%)\` }} />
+       </div>
+     );
+     const Badge = ({ className, variant, children, ...props }) => {
+@@ -57,7 +58,7 @@
+       if (variant === "outline") variantStyle = "text-slate-950 border border-slate-200 dark:text-slate-50 dark:border-slate-800 ";
+       if (variant === "secondary") variantStyle = "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-50 ";
+       return (
+-        <div className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 ${variantStyle} ${className}`} {...props}>{children}</div>
++        <div className={\`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 \${variantStyle} \${className}\`} {...props}>{children}</div>
+       );
+     };
+ 
+@@ -86,22 +87,22 @@
+             {
+               id: 'ch1-l1',
+               title: 'The Psychological Foundation',
+-              content: `Wealth is not about how much money you earn; it is about how much money you keep and how hard it works for you.
++              content: \`Wealth is not about how much money you earn; it is about how much money you keep and how hard it works for you.
+               
+ **Key Concepts:**
+ - **Income vs. Net Worth:** Income is temporary cash flow. Net worth (Assets - Liabilities) is the true measure of economic power.
+ - **Time Value of Money:** A dollar today is worth more than a dollar tomorrow due to its earning capacity.
+-- **Delayed Gratification:** Choosing the pain of discipline over the ease of distraction to buy back your future freedom.`,
++- **Delayed Gratification:** Choosing the pain of discipline over the ease of distraction to buy back your future freedom.\`,
+             },
+             {
+               id: 'ch1-l2',
+               title: 'The Rule of 72 & Compounding',
+-              content: `To optimize your growth trajectory, you must understand how compounding accelerates your returns.
++              content: \`To optimize your growth trajectory, you must understand how compounding accelerates your returns.
+ 
+ **Key Concepts:**
+ - **The Rule of 72:** Divide 72 by your annual return to see how many years it takes for your investment to double.
+ - **Historical Returns:** At 10% average market returns, your money doubles every 7.2 years.
+-- **Opportunity Costs:** A $1,000 luxury purchase today does not just cost $1,000; it costs the $45,000+ it could have grown to over 40 years at 10% returns.`
++- **Opportunity Costs:** A $1,000 luxury purchase today does not just cost $1,000; it costs the $45,000+ it could have grown to over 40 years at 10% returns.\`
+             }
+           ],
+           quiz: [
+@@ -125,22 +126,22 @@
+             {
+               id: 'ch2-l1',
+               title: 'Optimizing Expenses & Pay Yourself First',
+-              content: `To build sustainable wealth, you must take full control over cash flow inflows and outflows.
++              content: \`To build sustainable wealth, you must take full control over cash flow inflows and outflows.
+ 
+ **Key Concepts:**
+ - **Pay Yourself First:** Treat your savings exactly like a non-negotiable bill. Spend what is left over *after* saving.
+ - **Fixed vs. Variable Expenses:** Fixed costs are the recurring "iron" costs (rent, subscriptions). Variable costs are fluid monthly expenses (dining out) that hide lifestyle creep.
+-- **Expense Audits:** Cancel apps not used in 30 days and wait 24 hours for purchases over $50 to prevent emotional spending.`
++- **Expense Audits:** Cancel apps not used in 30 days and wait 24 hours for purchases over $50 to prevent emotional spending.\`
+             },
+             {
+               id: 'ch2-l2',
+               title: 'The 50/30/20 Rule & Automation',
+-              content: `Creating systems removes human willpower as a bottleneck for saving money.
++              content: \`Creating systems removes human willpower as a bottleneck for saving money.
+ 
+ **Key Concepts:**
+ - **The 50/30/20 Budget:** Allocate 50% of take-home pay to Needs, 30% to Wants, and 20% to Savings and Debt repayment.
+ - **The Needs Limit:** If your Needs exceed 50%, you are overextended and must downsize or raise income.
+-- **Automating Wealth:** Set up automatic transfers so that money sweeps itself into investment and savings hubs directly on payday.`
++- **Automating Wealth:** Set up automatic transfers so that money sweeps itself into investment and savings hubs directly on payday.\`
+             }
+           ],
+           quiz: [
+@@ -164,22 +165,22 @@
+             {
+               id: 'ch3-l1',
+               title: 'High-Yield Savings & Emergency Reserves',
+-              content: `Preserving purchasing power requires moving away from the inflation traps of big banks.
++              content: \`Preserving purchasing power requires moving away from the inflation traps of big banks.
+ 
+ **Key Concepts:**
+ - **The Inflation Trap:** Leaving money in traditional savings accounts at 0.01% APY causes your capital to lose purchasing power daily.
+ - **HYSA Edge:** Moving money to online banks paying 4.0% to 5.0%+ APY protects your capital from immediate debasement.
+-- **Emergency Reserve Number:** Aim for 6 months of basic living expenses. Keep it liquid, completely stable, and separate from daily checking.`
++- **Emergency Reserve Number:** Aim for 6 months of basic living expenses. Keep it liquid, completely stable, and separate from daily checking.\`
+             },
+             {
+               id: 'ch3-l2',
+               title: 'The Banking Stack Architecture',
+-              content: `To build wealth, your capital must follow a transit and storage pipeline.
++              content: \`To build wealth, your capital must follow a transit and storage pipeline.
+ 
+ **Key Concepts:**
+ - **The Transit Hub (Checking):** Holds exactly 1 month of bills. Extra cash leaves this hub immediately to avoid missed returns.
+ - **The Storage Hub (Savings/MMAs):** Holds emergency funds and specific short-term savings goals in HYSAs or Money Market Accounts.
+-- **Insurance Protection:** Always ensure funds are deposited in FDIC-insured or NCUA-insured institutions, covering up to $250,000 per depositor.`
++- **Insurance Protection:** Always ensure funds are deposited in FDIC-insured or NCUA-insured institutions, covering up to $250,000 per depositor.\`
+             }
+           ],
+           quiz: [
+@@ -203,22 +204,22 @@
+             {
+               id: 'ch4-l1',
+               title: 'Mastering the FICO Score Breakdown',
+-              content: `To make debt your highly productive servant, you must understand the rules of the system.
++              content: \`To make debt your highly productive servant, you must understand the rules of the system.
+ 
+ **Key Concepts:**
+ - **FICO Calculation:** Payment history is 35%; Amounts owed (Utilization) is 30%; Length of history is 15%; Mix and new credit is 20%.
+ - **The 10% Rule:** Keep your overall credit usage below 10% to signal high financial security to scoring algorithms.
+-- **Good vs. Bad Debt:** Leverage that appreciates or generates direct cash flow is good debt. High-interest debt for depreciating assets is bad debt.`
++- **Good vs. Bad Debt:** Leverage that appreciates or generates direct cash flow is good debt. High-interest debt for depreciating assets is bad debt.\`
+             },
+             {
+               id: 'ch4-l2',
+               title: 'Strategic Leverage & The Credit Shield',
+-              content: `Wealthy individuals use credit cards as tools and borrow strategic capital to multiply returns.
++              content: \`Wealthy individuals use credit cards as tools and borrow strategic capital to multiply returns.
+ 
+ **Key Concepts:**
+ - **Strategic Float:** Credit cards provide 30 days of free float plus consumer insurance protections.
+ - **Spread Multiplication:** Borrowing at low interest rates (e.g., 5% mortgage) to invest in higher-yielding vehicles (e.g., 10% equities) increases your net worth with Other People's Money (OPM).
+-- **The Credit Shield:** Proactively freeze credit reports at Experian, Equifax, and TransUnion to prevent systemic identity theft.`
++- **The Credit Shield:** Proactively freeze credit reports at Experian, Equifax, and TransUnion to prevent systemic identity theft.\`
+             }
+           ],
+           quiz: [
+@@ -242,22 +243,22 @@
+             {
+               id: 'ch5-l1',
+               title: 'Psychology vs. Mathematics',
+-              content: `Eradicating consumer liabilities is your highest immediate ROI investment.
++              content: \`Eradicating consumer liabilities is your highest immediate ROI investment.
+ 
+ **Key Concepts:**
+ - **The Debt Snowball:** Pay off the smallest balance first to build emotional momentum and secure quick wins.
+ - **The Debt Avalanche:** Focus on the highest interest rate first. This is the mathematically optimal strategy.
+-- **Reverse Compounding:** High interest rates (like 24% credit cards) double what you owe every 3 years, destroying wealth.`
++- **Reverse Compounding:** High interest rates (like 24% credit cards) double what you owe every 3 years, destroying wealth.\`
+             },
+             {
+               id: 'ch5-l2',
+               title: 'Consolidation Tools & Eradication Strategy',
+-              content: `To stop high-interest losses, use financial tools to optimize interest rates.
++              content: \`To stop high-interest losses, use financial tools to optimize interest rates.
+ 
+ **Key Concepts:**
+ - **Balance Transfers:** Move 25%+ interest debt to 0% interest cards for 12-18 months to halt your losses.
+ - **Fixed Personal Loans:** Exchange variable high-interest credit card debt for lower-rate fixed term loans to reduce payments.
+-- **Warning Signs:** Making only minimum payments, avoiding financial statements, or using credit cards for essentials indicate a structural deficit.`
++- **Warning Signs:** Making only minimum payments, avoiding financial statements, or using credit cards for essentials indicate a structural deficit.\`
+             }
+           ],
+           quiz: [
+@@ -281,22 +282,22 @@
+             {
+               id: 'ch6-l1',
+               title: 'Ownership vs. Lending',
+-              content: `Moving from a consumer to an asset owner is the single most important wealth-building shift you can make.
++              content: \`Moving from a consumer to an asset owner is the single most important wealth-building shift you can make.
+ 
+ **Key Concepts:**
+ - **Equity (Ownership):** When you buy stocks, you own parts of real businesses and participate directly in profits without an earnings ceiling.
+ - **Debt (Lending):** Buying bonds or leaving money in savings makes you a lender. You earn a fixed interest rate, but miss the business growth.
+-- **Market Trajectory:** Despite temporary downturns, the long-term trend of the equity market is up-and-to-the-right.`
++- **Market Trajectory:** Despite temporary downturns, the long-term trend of the equity market is up-and-to-the-right.\`
+             },
+             {
+               id: 'ch6-l2',
+               title: 'Diversification & Index Funds',
+-              content: `To grow long-term wealth securely, buy the entire market instead of picking single companies.
++              content: \`To grow long-term wealth securely, buy the entire market instead of picking single companies.
+ 
+ **Key Concepts:**
+ - **Index Funds & ETFs:** Funds that track a major market index (like the S&P 500) give you instant, low-cost diversification.
+ - **Managing Risk:** Broad exposure removes single-stock risk. If one company fails, the others continue growing.
+-- **Low Fees:** Keep expense ratios low (~0.03%). A 1% fee difference can cost you over $500,000 in lost gains over a 30-year career.`
++- **Low Fees:** Keep expense ratios low (~0.03%). A 1% fee difference can cost you over $500,000 in lost gains over a 30-year career.\`
+             }
+           ],
+           quiz: [
+@@ -320,23 +321,23 @@
+             {
+               id: 'ch7-l1',
+               title: 'The Third Act & Employer Plans',
+-              content: `Retirement is not a destination or an age; it is a mathematical state where your passive income exceeds your living expenses. It marks the transition from "working for money" to "money working for you".
++              content: \`Retirement is not a destination or an age; it is a mathematical state where your passive income exceeds your living expenses. It marks the transition from "working for money" to "money working for you".
+ 
+ **Key Concepts:**
+ - **The Match Strategy:** Your employer's 401(k) match is the only guaranteed 100% return in the financial world. Failing to contribute up to the match is the equivalent of taking a voluntary pay cut.
+ - **Tax-Efficiency Warfare:** Choosing between Traditional (Tax Me Later) and Roth (Tax Me Now) accounts depends entirely on your current tax bracket vs. your expected bracket at retirement.
+-- **Tax Diversification:** Splitting assets across different tax buckets allows you to make strategic withdrawals later, minimizing your lifetime IRS bill.`
++- **Tax Diversification:** Splitting assets across different tax buckets allows you to make strategic withdrawals later, minimizing your lifetime IRS bill.\`
+             },
+             {
+               id: 'ch7-l2',
+               title: 'The Withdrawal Math & FIRE',
+-              content: `Sustainable cash flow preservation is critical when shifting from asset accumulation to the distribution phase of retirement.
++              content: \`Sustainable cash flow preservation is critical when shifting from asset accumulation to the distribution phase of retirement.
+ 
+ **Key Concepts:**
+ - **The 4% Rule:** To support a 4% annual withdrawal rate, you need a portfolio size equivalent to 25 times your desired annual living expenses. 
+ - **The FI Number:** This is your Financial Independence target. Once your net worth crosses this threshold (Annual Expenses × 25), work becomes entirely optional.
+ - **The RMD Factor:** Required Minimum Distributions are mandatory withdrawals from tax-deferred accounts enforced by the IRS. Missing an RMD carries a severe 25% tax penalty on the non-withdrawn amount.
+-- **The FIRE Movement:** By saving 50-70% of income and directing it to low-cost funds, the timeline to retire can be compressed down to 10 to 15 years.`
++- **The FIRE Movement:** By saving 50-70% of income and directing it to low-cost funds, the timeline to retire can be compressed down to 10 to 15 years.\`
+             }
+           ],
+           quiz: [
+@@ -360,22 +361,22 @@
+             {
+               id: 'ch8-l1',
+               title: 'Hard Assets vs. Paper Wealth',
+-              content: `Real estate builds wealth through tangible assets, cash flow, and tax-efficient leverage.
++              content: \`Real estate builds wealth through tangible assets, cash flow, and tax-efficient leverage.
+ 
+ **Key Concepts:**
+ - **Primary Residence vs. Investment:** A primary residence is a lifestyle choice that consumes capital. An investment property is a financial vehicle designed strictly for profit.
+ - **Cap Rate Calculation:** Net Operating Income (NOI) divided by the Purchase Price gives you the property’s raw investment yield.
+-- **The Power of Leverage:** A 20% down payment lets you control 100% of an asset. A 5% asset appreciation doubles into a 25% return on your cash.`
++- **The Power of Leverage:** A 20% down payment lets you control 100% of an asset. A 5% asset appreciation doubles into a 25% return on your cash.\`
+             },
+             {
+               id: 'ch8-l2',
+               title: 'House Hacking & Strategic Deferrals',
+-              content: `You can lower your biggest monthly expense—housing—to free up capital for investing.
++              content: \`You can lower your biggest monthly expense—housing—to free up capital for investing.
+ 
+ **Key Concepts:**
+ - **House Hacking:** Living in one unit of a multi-family property while renting out the others lets tenants cover your mortgage.
+ - **1031 Exchange:** Sell a property and move the profits into another "like-kind" asset to defer 100% of your capital gains taxes.
+-- **REITs:** Real Estate Investment Trusts are required to pay out 90% of taxable income as dividends, giving you passive exposure to properties without the headaches of managing tenants.`
++- **REITs:** Real Estate Investment Trusts are required to pay out 90% of taxable income as dividends, giving you passive exposure to properties without the headaches of managing tenants.\`
+             }
+           ],
+           quiz: [
+@@ -399,22 +400,22 @@
+             {
+               id: 'ch9-l1',
+               title: 'Decoupling Time from Income',
+-              content: `True entrepreneurial wealth is built on systems that generate income independently of your physical hours.
++              content: \`True entrepreneurial wealth is built on systems that generate income independently of your physical hours.
+ 
+ **Key Concepts:**
+ - **Job vs. Business:** A job is a linear exchange of hours for dollars. A business is a leveraged system that decouples income from time.
+ - **Systematization:** Creating repeatable processes that deliver consistent results without your daily involvement.
+-- **The $1,000/hr Mindset:** Focus purely on high-leverage strategic growth while outsourcing low-value tasks to free up your mental space.`
++- **The $1,000/hr Mindset:** Focus purely on high-leverage strategic growth while outsourcing low-value tasks to free up your mental space.\`
+             },
+             {
+               id: 'ch9-l2',
+               title: 'Testing Capital & Scalability with Code',
+-              content: `Modern systems let you test ideas with very little starting capital.
++              content: \`Modern systems let you test ideas with very little starting capital.
+ 
+ **Key Concepts:**
+ - **Lean Startup Loop:** Use the Build-Measure-Learn cycle to launch a Minimum Viable Product (MVP), gather performance data, and adjust your direction.
+ - **Scaling with Software:** Code has zero inventory costs and infinite scalability, making it a highly valuable asset class.
+-- **Talent Arbitrage:** Leverage specialized remote talent to optimize operational costs and scale your operations efficiently.`
++- **Talent Arbitrage:** Leverage specialized remote talent to optimize operational costs and scale your operations efficiently.\`
+             }
+           ],
+           quiz: [
+@@ -438,23 +439,23 @@
+             {
+               id: 'ch12-l1',
+               title: 'Wills vs. Trusts & Basis Step-Up',
+-              content: `Estate planning is the architecture of transition—controlling assets, mitigating taxes, and preserving legacy.
++              content: \`Estate planning is the architecture of transition—controlling assets, mitigating taxes, and preserving legacy.
+ 
+ **Key Concepts:**
+ - **The Probate Trap:** A Will is a public document that must go through probate court. This process is slow (9–24 months), public, and expensive, often devouring 3–7% of the estate's total value in legal fees.
+ - **Living Trusts:** A proactive legal entity that bypasses probate entirely, ensuring an immediate, private, and efficient transfer of assets to heirs. It also provides immediate instructions in case of mental incapacity.
+-- **The Step-Up in Basis:** When an heir inherits an appreciated asset, the cost basis is reset to the fair market value at the date of death. This wipes out all accumulated capital gains, allowing heirs to sell immediately with zero capital gains tax.`
++- **The Step-Up in Basis:** When an heir inherits an appreciated asset, the cost basis is reset to the fair market value at the date of death. This wipes out all accumulated capital gains, allowing heirs to sell immediately with zero capital gains tax.\`
+             },
+             {
+               id: 'ch12-l2',
+               title: 'Direct Contracts & Organizing Legacy',
+-              content: `A complete estate architecture requires securing non-probate contracts, minimizing tax exposure, and organizing digital access.
++              content: \`A complete estate architecture requires securing non-probate contracts, minimizing tax exposure, and organizing digital access.
+ 
+ **Key Concepts:**
+ - **The Beneficiary Trap:** Beneficiary designations on IRAs, 401(k)s, and life insurance policies are direct legal contracts that completely override any instructions in a Will.
+ - **Power of Attorney Pillars:** Durable Financial and Healthcare POAs appoint trusted individuals to manage financial accounts and medical decisions should you become incapacitated.
+ - **Tax Mitigation Strategies:** You can systematically reduce a taxable estate by using the annual gift tax exclusion ($18,000 per person, per year).
+-- **The Death Folder:** An organized collection of instructions containing digital access keys, professional advisor contacts, and the physical location of the trust and will.`
++- **The Death Folder:** An organized collection of instructions containing digital access keys, professional advisor contacts, and the physical location of the trust and will.\`
+             }
+           ],
+           quiz: [
+@@ -478,23 +479,23 @@
+             {
+               id: 'ch13-l1',
+               title: 'The Cognitive Landscape',
+-              content: `Sustainable wealth requires rewiring your cognitive blueprint to make data-driven, objective financial decisions.
++              content: \`Sustainable wealth requires rewiring your cognitive blueprint to make data-driven, objective financial decisions.
+ 
+ **Key Concepts:**
+ - **Loss Aversion:** Evolutionarily, the fear of losing is twice as strong as the joy of winning. This bias causes investors to hold losing assets too long or panic-sell during routine market drops.
+ - **Hedonic Adaptation:** Significant purchases create temporary happiness spikes, followed by a swift return to your internal emotional baseline. Wealthy individuals build freedom rather than chasing lifestyle items to bypass this treadmill.
+-- **Lifestyle Creep:** As income rises, non-essential "wants" quickly morph into perceived "needs". Compounding wealth requires freezing your base spending floor and diverting every increase directly into productive assets.`
++- **Lifestyle Creep:** As income rises, non-essential "wants" quickly morph into perceived "needs". Compounding wealth requires freezing your base spending floor and diverting every increase directly into productive assets.\`
+             },
+             {
+               id: 'ch13-l2',
+               title: 'Combatting Cognitive Creep & Biases',
+-              content: `To build sustainable capital, you must put behavioral rules in place to protect your wealth from your own instincts.
++              content: \`To build sustainable capital, you must put behavioral rules in place to protect your wealth from your own instincts.
+ 
+ **Key Concepts:**
+ - **The 50% Raise Rule:** Commit to sweeping at least 50% of every bonus or salary increase into investment hubs before it hits your spending accounts.
+ - **The 72-Hour Rule:** To counteract dopamine-driven impulse buys, wait 72 hours on non-essential purchases over $200.
+ - **Freedom Indexing:** Recalculate all potential purchases into "Hours of Life" rather than dollar amounts to determine the true human cost.
+-- **Confirmation Bias:** The brain naturally seeks and accepts data that aligns with existing positions while ignoring contrary evidence. Counteract this by intentionally building the explicit "Bear Case" for every investment.`
++- **Confirmation Bias:** The brain naturally seeks and accepts data that aligns with existing positions while ignoring contrary evidence. Counteract this by intentionally building the explicit "Bear Case" for every investment.\`
+             }
+           ],
+           quiz: [
+@@ -577,9 +578,9 @@
+                     <Button
+                       key={idx}
+                       variant={btnVariant}
+-                      className={`w-full justify-start text-left h-auto py-4 px-5 text-base font-medium transition-all cursor-pointer ${
++                      className={\`w-full justify-start text-left h-auto py-4 px-5 text-base font-medium transition-all cursor-pointer \${
+                         !isAnswered && "hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+-                      }`}
++                      }\`}
+                       onClick={() => handleAnswerClick(idx)}
+                       disabled={isAnswered}
+                     >
+@@ -606,7 +607,7 @@
+           ) : (
+             <Card className="border-2 border-slate-100 dark:border-slate-800 shadow-2xl bg-white dark:bg-slate-900">
+               <CardContent className="pt-12 pb-12 flex flex-col items-center text-center max-w-md mx-auto space-y-6">
+-                <div className={`w-24 h-24 rounded-full flex items-center justify-center text-white shadow-lg ${isPassed ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-red-500 shadow-red-500/20'}`}>
++                <div className={\`w-24 h-24 rounded-full flex items-center justify-center text-white shadow-lg \${isPassed ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-red-500 shadow-red-500/20'}\`}>
+                   {isPassed ? <Trophy /> : <XCircle />}
+                 </div>
+ 
+@@ -701,11 +702,11 @@
+                   return (
+                     <Card
+                       key={chapter.id}
+-                      className={`relative border-2 transition-all duration-300 overflow-hidden bg-white dark:bg-slate-900 hover:shadow-xl ${
++                      className={\`relative border-2 transition-all duration-300 overflow-hidden bg-white dark:bg-slate-900 hover:shadow-xl \${
+                         unlocked 
+                           ? 'cursor-pointer hover:border-slate-400 dark:hover:border-slate-700' 
+                           : 'opacity-75 cursor-not-allowed border-slate-100 dark:border-slate-800/40'
+-                      }`}
++                      }\`}
+                       onClick={() => unlocked && selectChapter(chapter)}
+                     >
+                       <CardContent className="p-6">
+@@ -812,4 +813,13 @@
+     root.render(<App />);
+   </script>
+ </body>
+-</html>
+\ No newline at end of file
++</html>`;
++
++  return (
++    <iframe
++      srcDoc={html}
++      style={{ width: '100%', height: '100vh', border: 'none' }}
++      title="Wealth Mastery Course"
++    />
++  );
++}

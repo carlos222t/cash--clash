@@ -1,0 +1,179 @@
+--- a/src/pages/Login.jsx	2026-05-02 16:37:52.687670075 +0000
++++ b/src/pages/Login.jsx	2026-05-02 16:39:15.949743010 +0000
+@@ -5,14 +5,31 @@
+ import { Input } from '@/components/ui/input';
+ import { Label } from '@/components/ui/label';
+ import { toast } from 'sonner';
+-import { Swords, Mail, Loader2, AtSign } from 'lucide-react';
++import { Swords, Mail, Loader2, AtSign, Globe } from 'lucide-react';
+ import { useNavigate } from 'react-router-dom';
+ import { useAuth } from '@/lib/AuthContext';
+ 
++const REGIONS = [
++  { value: 'us',  label: '🇺🇸 United States',    currency: 'USD', symbol: '$'  },
++  { value: 'gb',  label: '🇬🇧 United Kingdom',    currency: 'GBP', symbol: '£'  },
++  { value: 'eu',  label: '🇪🇺 European Union',     currency: 'EUR', symbol: '€'  },
++  { value: 'ca',  label: '🇨🇦 Canada',             currency: 'CAD', symbol: 'CA$'},
++  { value: 'au',  label: '🇦🇺 Australia',          currency: 'AUD', symbol: 'A$' },
++  { value: 'mx',  label: '🇲🇽 Mexico',             currency: 'MXN', symbol: 'MX$'},
++  { value: 'br',  label: '🇧🇷 Brazil',             currency: 'BRL', symbol: 'R$' },
++  { value: 'in',  label: '🇮🇳 India',              currency: 'INR', symbol: '₹'  },
++  { value: 'jp',  label: '🇯🇵 Japan',              currency: 'JPY', symbol: '¥'  },
++  { value: 'cn',  label: '🇨🇳 China',              currency: 'CNY', symbol: '¥'  },
++  { value: 'za',  label: '🇿🇦 South Africa',       currency: 'ZAR', symbol: 'R'  },
++  { value: 'ng',  label: '🇳🇬 Nigeria',            currency: 'NGN', symbol: '₦'  },
++  { value: 'other', label: '🌍 Other',             currency: 'USD', symbol: '$'  },
++];
++
+ export default function Login() {
+   const [email, setEmail] = useState('');
+   const [password, setPassword] = useState('');
+   const [username, setUsername] = useState('');
++  const [region, setRegion] = useState('us');
+   const [isSignUp, setIsSignUp] = useState(false);
+   const [loading, setLoading] = useState(false);
+   const navigate = useNavigate();
+@@ -46,6 +63,9 @@
+             email: email,
+             username: username.toLowerCase(),
+             display_name: username,
++            region: region,
++            currency: REGIONS.find(r => r.value === region)?.currency || 'USD',
++            currency_symbol: REGIONS.find(r => r.value === region)?.symbol || '$',
+             level: 1, xp: 0, total_saved: 0, monthly_budget: 0,
+             monthly_income: 0, badges: [], streak_days: 0, role: 'student',
+             battles_won: 0, tournament_wins: 0,
+@@ -101,6 +121,20 @@
+                 <p className="text-xs text-muted-foreground">3–20 chars, letters/numbers/underscores. Used to send clash invites.</p>
+               </div>
+             )}
++            {isSignUp && (
++              <div className="space-y-2">
++                <Label htmlFor="region" className="flex items-center gap-1.5"><Globe className="w-3.5 h-3.5" /> Region</Label>
++                <select
++                  id="region"
++                  value={region}
++                  onChange={e => setRegion(e.target.value)}
++                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
++                >
++                  {REGIONS.map(r => <option key={r.value} value={r.value}>{r.label} — {r.currency}</option>)}
++                </select>
++                <p className="text-xs text-muted-foreground">Sets your default currency for budgets and challenges.</p>
++              </div>
++            )}
+             <div className="space-y-2">
+               <Label htmlFor="email">Email</Label>
+               <Input id="email" type="email" placeholder="you@example.com" value={email}
+--- a/src/pages/Settings.jsx	2026-05-02 16:37:52.689199548 +0000
++++ b/src/pages/Settings.jsx	2026-05-02 16:39:23.717974631 +0000
+@@ -11,10 +11,26 @@
+ import { Badge } from '@/components/ui/badge';
+ import {
+   Settings as SettingsIcon, User, Camera, Save, LogOut,
+-  Shield, Palette, RefreshCw, CheckCircle2, AtSign,
++  Shield, Palette, RefreshCw, CheckCircle2, AtSign, Globe,
+ } from 'lucide-react';
+ import { useAuth } from '@/lib/AuthContext';
+ 
++const REGIONS = [
++  { value: 'us',  label: '🇺🇸 United States',    currency: 'USD', symbol: '$'  },
++  { value: 'gb',  label: '🇬🇧 United Kingdom',    currency: 'GBP', symbol: '£'  },
++  { value: 'eu',  label: '🇪🇺 European Union',     currency: 'EUR', symbol: '€'  },
++  { value: 'ca',  label: '🇨🇦 Canada',             currency: 'CAD', symbol: 'CA$'},
++  { value: 'au',  label: '🇦🇺 Australia',          currency: 'AUD', symbol: 'A$' },
++  { value: 'mx',  label: '🇲🇽 Mexico',             currency: 'MXN', symbol: 'MX$'},
++  { value: 'br',  label: '🇧🇷 Brazil',             currency: 'BRL', symbol: 'R$' },
++  { value: 'in',  label: '🇮🇳 India',              currency: 'INR', symbol: '₹'  },
++  { value: 'jp',  label: '🇯🇵 Japan',              currency: 'JPY', symbol: '¥'  },
++  { value: 'cn',  label: '🇨🇳 China',              currency: 'CNY', symbol: '¥'  },
++  { value: 'za',  label: '🇿🇦 South Africa',       currency: 'ZAR', symbol: 'R'  },
++  { value: 'ng',  label: '🇳🇬 Nigeria',            currency: 'NGN', symbol: '₦'  },
++  { value: 'other', label: '🌍 Other',             currency: 'USD', symbol: '$'  },
++];
++
+ const AVATAR_PRESETS = [
+   { id: 'avatar1',  emoji: '🦁', label: 'Lion' },
+   { id: 'avatar2',  emoji: '🐯', label: 'Tiger' },
+@@ -41,6 +57,7 @@
+   const [isSaving, setIsSaving] = useState(false);
+   const [hasChanges, setHasChanges] = useState(false);
+   const [activeTab, setActiveTab] = useState('profile');
++  const [region, setRegion] = useState('us');
+   const queryClient = useQueryClient();
+   const originalValues = useRef({});
+   const initialized = useRef(false);
+@@ -64,10 +81,12 @@
+       const bioVal = profile.bio || '';
+       const avatar = profile.avatar_id || 'avatar1';
+       const avatarUrl = profile.custom_avatar_url || '';
++      const reg = profile.region || 'us';
+       setDisplayName(name); setUsername(uname); setBio(bioVal);
+       setSelectedAvatar(avatar);
++      setRegion(reg);
+       setCustomAvatarUrl(avatarUrl); setCustomAvatarInput(avatarUrl);
+-      originalValues.current = { name, uname, bioVal, avatar, avatarUrl };
++      originalValues.current = { name, uname, bioVal, avatar, avatarUrl, reg };
+       initialized.current = true;
+     }
+   }, [profile, user]);
+@@ -78,7 +97,8 @@
+       username !== originalValues.current.uname ||
+       bio !== originalValues.current.bioVal ||
+       selectedAvatar !== originalValues.current.avatar ||
+-      customAvatarUrl !== originalValues.current.avatarUrl;
++      customAvatarUrl !== originalValues.current.avatarUrl ||
++      region !== originalValues.current.reg;
+     setHasChanges(changed);
+   }, [displayName, username, bio, selectedAvatar, customAvatarUrl]);
+ 
+@@ -111,6 +131,9 @@
+         avatar_id: selectedAvatar,
+         custom_avatar_url: customAvatarUrl,
+         email: user?.email,
++        region: region,
++        currency: REGIONS.find(r => r.value === region)?.currency || 'USD',
++        currency_symbol: REGIONS.find(r => r.value === region)?.symbol || '$',
+       };
+       if (profile) {
+         await entities.UserProfile.update(profile.id, updateData);
+@@ -125,7 +148,7 @@
+       originalValues.current = {
+         name: updateData.display_name, uname: updateData.username,
+         bioVal: updateData.bio, avatar: updateData.avatar_id,
+-        avatarUrl: updateData.custom_avatar_url,
++        avatarUrl: updateData.custom_avatar_url, reg: updateData.region,
+       };
+       await queryClient.invalidateQueries({ queryKey: ['profile'] });
+       setHasChanges(false);
+@@ -158,6 +181,7 @@
+     setSelectedAvatar(originalValues.current.avatar);
+     setCustomAvatarUrl(originalValues.current.avatarUrl);
+     setCustomAvatarInput(originalValues.current.avatarUrl);
++    setRegion(originalValues.current.reg);
+     setHasChanges(false); toast('Changes reset');
+   };
+ 
+@@ -337,6 +361,23 @@
+         {activeTab === 'account' && (
+           <div className="space-y-4">
+             <Card>
++              <CardHeader><CardTitle className="text-base flex items-center gap-2"><Globe className="w-4 h-4 text-primary" /> Region &amp; Currency</CardTitle>
++                <CardDescription>Sets your currency for budgets and challenges.</CardDescription>
++              </CardHeader>
++              <CardContent className="space-y-3">
++                <select
++                  value={region}
++                  onChange={e => setRegion(e.target.value)}
++                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
++                >
++                  {REGIONS.map(r => <option key={r.value} value={r.value}>{r.label} — {r.currency}</option>)}
++                </select>
++                {(() => { const r = REGIONS.find(x => x.value === region); return r ? (
++                  <p className="text-xs text-muted-foreground">Currency: <span className="font-medium text-foreground">{r.symbol} {r.currency}</span></p>
++                ) : null; })()}
++              </CardContent>
++            </Card>
++            <Card>
+               <CardHeader><CardTitle className="text-base flex items-center gap-2"><Shield className="w-4 h-4 text-primary" /> Account Info</CardTitle></CardHeader>
+               <CardContent className="space-y-3">
+                 <div className="flex justify-between py-2 border-b border-border">

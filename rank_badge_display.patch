@@ -1,0 +1,135 @@
+--- a/src/pages/Badges.jsx	2026-05-05 03:46:56.512396701 +0000
++++ b/src/pages/Badges.jsx	2026-05-05 03:47:18.204563747 +0000
+@@ -6,6 +6,19 @@
+ import LevelBadge from '../components/game/LevelBadge';
+ import XPBar from '../components/game/XPBar';
+ import { Trophy, Lock, Sparkles } from 'lucide-react';
++
++const RANK_IMGS = [
++  { minLevel: 40, img: '/badges/cashlegend.png'   },
++  { minLevel: 30, img: '/badges/moneymaster.png'  },
++  { minLevel: 20, img: '/badges/budgetboss.png'   },
++  { minLevel: 15, img: '/badges/savingspro.png'   },
++  { minLevel: 10, img: '/badges/smartspender.png' },
++  { minLevel: 5,  img: '/badges/pennypincher.png' },
++  { minLevel: 1,  img: '/badges/rookie_saver.png' },
++];
++function getRankImg(level) {
++  return (RANK_IMGS.find(r => level >= r.minLevel) || RANK_IMGS[RANK_IMGS.length - 1]).img;
++}
+ import { motion } from 'framer-motion';
+ 
+ export default function Badges() {
+@@ -43,7 +56,10 @@
+           <div className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 p-6 flex flex-col sm:flex-row items-center gap-6">
+             <LevelBadge xp={xp} size="lg" />
+             <div className="flex-1 text-center sm:text-left">
+-              <h1 className="text-2xl font-heading font-bold">{profile?.display_name || 'Player'}</h1>
++              <div className="flex items-center gap-2 justify-center sm:justify-start">
++                <h1 className="text-2xl font-heading font-bold">{profile?.display_name || 'Player'}</h1>
++                <img src={getRankImg(level)} alt="rank" className="w-8 h-8 rounded-full object-cover" />
++              </div>
+               <p className="text-muted-foreground text-sm">Level {level} · {getRankTitle(level)}</p>
+               <div className="mt-3 max-w-sm"><XPBar xp={xp} /></div>
+             </div>
+@@ -62,10 +78,14 @@
+         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+           {RANKS.map(rank => {
+             const achieved = level >= rank.minLevel;
++            const isCurrent = achieved && (rank.minLevel === Math.max(...RANKS.filter(r => level >= r.minLevel).map(r => r.minLevel)));
+             return (
+-              <div key={rank.name} className={`text-center p-3 rounded-xl border transition-all ${achieved ? 'border-primary/30 bg-card shadow-sm' : 'border-border/50 bg-muted/30 opacity-50'}`}>
+-                <img src={rank.img} alt={rank.name} className="w-12 h-12 mx-auto mb-2 rounded-full object-cover" style={{ filter: achieved ? 'none' : 'grayscale(1)' }} />
+-                <p className="text-[10px] font-semibold">{rank.name}</p>
++              <div key={rank.name} className={`text-center p-3 rounded-xl border transition-all ${isCurrent ? 'border-primary bg-primary/10 shadow-lg scale-105' : achieved ? 'border-primary/30 bg-card shadow-sm' : 'border-border/50 bg-muted/30 opacity-50'}`}>
++                <div className={isCurrent ? 'rank-pulse' : ''}>
++                  <img src={rank.img} alt={rank.name} className="w-12 h-12 mx-auto mb-2 rounded-full object-cover" style={{ filter: achieved ? 'none' : 'grayscale(1)' }} />
++                </div>
++                <p className={`text-[10px] font-semibold ${isCurrent ? 'text-primary' : ''}`}>{rank.name}</p>
++                {isCurrent && <p className="text-[9px] text-primary font-bold mt-0.5">CURRENT</p>}
+               </div>
+             );
+           })}
+--- a/src/pages/Dashboard.jsx	2026-05-05 03:46:56.514561982 +0000
++++ b/src/pages/Dashboard.jsx	2026-05-05 03:47:37.454647453 +0000
+@@ -18,6 +18,19 @@
+ import InvestmentEstimator from '../components/dashboard/InvestmentEstimator';
+ import { getLevelFromXP, getRankTitle, getRankColor, ALL_BADGES } from '../components/game/GameUtils';
+ 
++const RANK_IMGS = [
++  { minLevel: 40, img: '/badges/cashlegend.png'   },
++  { minLevel: 30, img: '/badges/moneymaster.png'  },
++  { minLevel: 20, img: '/badges/budgetboss.png'   },
++  { minLevel: 15, img: '/badges/savingspro.png'   },
++  { minLevel: 10, img: '/badges/smartspender.png' },
++  { minLevel: 5,  img: '/badges/pennypincher.png' },
++  { minLevel: 1,  img: '/badges/rookie_saver.png' },
++];
++function getRankImg(level) {
++  return (RANK_IMGS.find(r => level >= r.minLevel) || RANK_IMGS[RANK_IMGS.length - 1]).img;
++}
++
+ /* ─── Design tokens aligned with Cash Clash gold/dark brand ─────────────── */
+ const tokens = {
+   gold:        '#B8973A',
+@@ -423,8 +436,9 @@
+ 
+             <div style={{ flex: 1, minWidth: 0 }}>
+               <p className="cc-section-label" style={{ marginBottom: 4 }}>Welcome back</p>
+-              <h1 className="cc-heading" style={{ fontSize: 30, margin: 0, marginBottom: 8 }}>
++              <h1 className="cc-heading" style={{ fontSize: 30, margin: 0, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                 {profile?.display_name || user?.full_name || 'Player'}
++                <img src={getRankImg(level)} alt="rank" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+               </h1>
+               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                 <span className="cc-rank-pill">{rank}</span>
+--- a/src/components/social/UserProfileModal.jsx	2026-05-05 03:46:56.515858128 +0000
++++ b/src/components/social/UserProfileModal.jsx	2026-05-05 03:47:54.077995357 +0000
+@@ -7,9 +7,22 @@
+ import { UserPlus, UserCheck, Star, Trophy, Swords, Zap, X, Shield } from 'lucide-react';
+ import { toast } from 'sonner';
+ import { useNavigate } from 'react-router-dom';
+-import { isGodly } from '@/components/game/GameUtils';
++import { isGodly, getLevelFromXP } from '@/components/game/GameUtils';
+ import GodlyWrapper, { GodlyBadgePill } from '@/components/social/GodlyProfile';
+ 
++const RANK_IMGS = [
++  { minLevel: 40, img: '/badges/cashlegend.png'   },
++  { minLevel: 30, img: '/badges/moneymaster.png'  },
++  { minLevel: 20, img: '/badges/budgetboss.png'   },
++  { minLevel: 15, img: '/badges/savingspro.png'   },
++  { minLevel: 10, img: '/badges/smartspender.png' },
++  { minLevel: 5,  img: '/badges/pennypincher.png' },
++  { minLevel: 1,  img: '/badges/rookie_saver.png' },
++];
++function getRankImg(level) {
++  return (RANK_IMGS.find(r => level >= r.minLevel) || RANK_IMGS[RANK_IMGS.length - 1]).img;
++}
++
+ const AVATAR_PRESETS = {
+   avatar1:'🦁', avatar2:'🐯', avatar3:'🦊', avatar4:'🐺', avatar5:'🦅',
+   avatar6:'🐉', avatar7:'🦄', avatar8:'🐻', avatar9:'🦈', avatar10:'🍆',
+@@ -121,6 +134,7 @@
+               <div className="min-w-0">
+                 <div className="flex items-center gap-1.5 flex-wrap">
+                   <h2 className="font-heading font-bold text-lg leading-tight truncate">{profile?.display_name}</h2>
++                  <img src={getRankImg(getLevelFromXP(profile?.xp || 0))} alt="rank" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+                   {godly && <GodlyBadgePill />}
+                 </div>
+                 <p className="text-sm text-muted-foreground">@{profile?.username}</p>
+--- a/src/index.css	2026-05-05 03:47:24.027492088 +0000
++++ b/src/index.css	2026-05-05 03:47:27.975831337 +0000
+@@ -89,4 +89,10 @@
+   body {
+     @apply bg-background text-foreground font-body;
+   }
+-}
+\ No newline at end of file
++}
++
++@keyframes rank-glow {
++  0%, 100% { filter: drop-shadow(0 0 4px rgba(184,151,58,0.6)); transform: scale(1); }
++  50%       { filter: drop-shadow(0 0 10px rgba(184,151,58,0.95)); transform: scale(1.08); }
++}
++.rank-pulse img { animation: rank-glow 2s ease-in-out infinite; }
+\ No newline at end of file

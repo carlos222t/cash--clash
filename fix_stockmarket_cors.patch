@@ -1,0 +1,43 @@
+--- a/src/pages/StockMarket.jsx
++++ b/src/pages/StockMarket.jsx
+@@ -15,19 +15,22 @@
+ 
+ async function fetchQuote(ticker) {
+   const type = ticker.startsWith('^') ? 'INDICES' : 'STOCKS';
+-  const url = `${BASE_URL}/quote?ticker=${encodeURIComponent(ticker)}&type=${type}`;
+-  const res = await fetch(url, {
+-    headers: { 'Authorization': `Bearer ${API_KEY}`, 'Accept': 'application/json' },
+-  });
+-  if (!res.ok) throw new Error(`Failed to fetch ${ticker}`);
++  const url = `${BASE_URL}/quote?ticker=${encodeURIComponent(ticker)}&type=${type}&apikey=${API_KEY}`;
++  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
++  if (!res.ok) {
++    const text = await res.text().catch(() => String(res.status));
++    throw new Error(`${ticker}: ${res.status} ${text}`);
++  }
+   const data = await res.json();
+-  // SteadyAPI returns the quote directly in `body`
+-  const body = data?.body ?? data;
+-  return { symbol: ticker, ...body };
++  const body = (data && data.body && typeof data.body === 'object' && !Array.isArray(data.body))
++    ? data.body : data;
++  return { symbol: body.symbol || ticker, ...body };
+ }
+ 
+ async function fetchQuotes(symbols) {
+   const results = await Promise.allSettled(symbols.map(fetchQuote));
++  const failed = results.filter(r => r.status === 'rejected');
++  if (failed.length > 0) console.warn('[StockMarket] failed:', failed.map(r => r.reason && r.reason.message));
+   return results
+     .filter(r => r.status === 'fulfilled')
+     .map(r => r.value);
+@@ -111,6 +114,9 @@
+         fetchQuotes(allSymbols),
+         fetchQuotes(INDICES),
+       ]);
++      if (stockData.length === 0 && allSymbols.length > 0) {
++        throw new Error('All quote requests failed — check your VITE_YAHOO_API_KEY in .env');
++      }
+       setStocks(stockData);
+       setIndices(indexData);
+       setLastUpdated(new Date());

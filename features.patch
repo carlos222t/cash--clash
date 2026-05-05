@@ -1,0 +1,288 @@
+--- a/src/pages/Clans.jsx	2026-05-02 16:47:18.938332603 +0000
++++ b/src/pages/Clans.jsx	2026-05-02 16:47:57.937358916 +0000
+@@ -9,15 +9,18 @@
+ import { Label } from '@/components/ui/label';
+ import { Badge } from '@/components/ui/badge';
+ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+-import { Shield, Plus, Users, Trophy, Zap, Crown, LogOut, Settings, Search, CheckCircle2, XCircle, Swords } from 'lucide-react';
++import { Shield, Plus, Users, Trophy, Zap, Crown, LogOut, Settings, Search, CheckCircle2, XCircle, Swords, UserPlus, X } from 'lucide-react';
+ import { toast } from 'sonner';
+ 
+ const CLAN_AVATARS = ['🛡️','⚔️','🔥','💎','👑','🦅','🐉','🌟','💰','🏆','🦁','🐺','🌙','⚡','🎯'];
+ 
+-function ClanAvatar({ clan, size = 'md' }) {
++function ClanAvatar({ clan, size = 'md', onClick }) {
+   const sizes = { sm: 'w-10 h-10 text-2xl', md: 'w-14 h-14 text-3xl', lg: 'w-20 h-20 text-5xl' };
+   return (
+-    <div className={`${sizes[size]} rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 overflow-hidden`}>
++    <div
++      className={`${sizes[size]} rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 overflow-hidden ${onClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
++      onClick={onClick}
++    >
+       {clan?.avatar_url
+         ? <img src={clan.avatar_url} alt="clan" className="w-full h-full object-cover" />
+         : <span>{clan?.avatar_emoji || '🛡️'}</span>
+@@ -26,6 +29,22 @@
+   );
+ }
+ 
++function ImageEnlargeModal({ src, emoji, onClose }) {
++  return (
++    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
++      <div className="relative" onClick={e => e.stopPropagation()}>
++        <button onClick={onClose} className="absolute -top-3 -right-3 w-7 h-7 rounded-full bg-card border border-border flex items-center justify-center z-10 hover:bg-muted">
++          <X className="w-4 h-4" />
++        </button>
++        {src
++          ? <img src={src} alt="enlarged" className="max-w-[80vw] max-h-[80vh] rounded-2xl object-contain shadow-2xl" />
++          : <div className="w-48 h-48 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-8xl shadow-2xl">{emoji}</div>
++        }
++      </div>
++    </div>
++  );
++}
++
+ function CreateClanDialog({ open, onClose, userId, onCreated }) {
+   const [name, setName] = useState('');
+   const [bio, setBio] = useState('');
+@@ -215,6 +234,9 @@
+   const [searchResults, setSearchResults] = useState([]);
+   const [searching, setSearching] = useState(false);
+   const [tab, setTab] = useState('my'); // 'my' | 'browse'
++  const [inviteUsername, setInviteUsername] = useState('');
++  const [inviteLoading, setInviteLoading] = useState(false);
++  const [enlargedImage, setEnlargedImage] = useState(null); // {src, emoji}
+   const queryClient = useQueryClient();
+ 
+   useEffect(() => {
+@@ -312,6 +334,23 @@
+     toast.success('You left the clan');
+   };
+ 
++  const handleInvite = async () => {
++    if (!inviteUsername.trim()) { toast.error('Enter a username'); return; }
++    setInviteLoading(true);
++    try {
++      const { data: target } = await supabase.from('user_profiles').select('*').eq('username', inviteUsername.trim().toLowerCase()).maybeSingle();
++      if (!target) { toast.error('User not found'); return; }
++      const { data: alreadyMember } = await supabase.from('clan_members').select('id').eq('clan_id', myClan.id).eq('user_id', target.created_by).maybeSingle();
++      if (alreadyMember) { toast.error('User is already in your clan'); return; }
++      const { data: existingReq } = await supabase.from('clan_join_requests').select('id').eq('clan_id', myClan.id).eq('user_id', target.created_by).eq('status', 'pending').maybeSingle();
++      if (existingReq) { toast.error('Invite already pending for this user'); return; }
++      await supabase.from('clan_join_requests').insert({ clan_id: myClan.id, user_id: target.created_by, status: 'pending', invited_by: user.id });
++      toast.success(`Invite sent to @${target.username}!`);
++      setInviteUsername('');
++    } catch (e) { toast.error('Failed to send invite'); }
++    finally { setInviteLoading(false); }
++  };
++
+   const invalidateClan = () => {
+     queryClient.invalidateQueries({ queryKey: ['my-clan-membership', user?.id] });
+     queryClient.invalidateQueries({ queryKey: ['clan-members', myClan?.id] });
+@@ -380,7 +419,7 @@
+                 <Card>
+                   <CardContent className="p-5">
+                     <div className="flex items-start gap-4">
+-                      <ClanAvatar clan={myClan} size="lg" />
++                      <ClanAvatar clan={myClan} size="lg" onClick={() => setEnlargedImage({ src: myClan.avatar_url, emoji: myClan.avatar_emoji || '🛡️' })} />
+                       <div className="flex-1 min-w-0">
+                         <div className="flex items-center gap-2 flex-wrap">
+                           <h2 className="font-heading font-bold text-xl">{myClan.name}</h2>
+@@ -451,6 +490,20 @@
+                     <CardTitle className="text-sm flex items-center gap-2">
+                       <Users className="w-4 h-4 text-primary" /> Members ({clanMembers.length})
+                     </CardTitle>
++                    {myRole === 'owner' && (
++                      <div className="flex gap-2 mt-2">
++                        <Input
++                          placeholder="Invite by username..."
++                          value={inviteUsername}
++                          onChange={e => setInviteUsername(e.target.value.replace(/\s/g, ''))}
++                          onKeyDown={e => e.key === 'Enter' && handleInvite()}
++                          className="h-8 text-sm"
++                        />
++                        <Button size="sm" variant="outline" className="gap-1.5 h-8 flex-shrink-0" onClick={handleInvite} disabled={inviteLoading}>
++                          <UserPlus className="w-3.5 h-3.5" /> Invite
++                        </Button>
++                      </div>
++                    )}
+                   </CardHeader>
+                   <CardContent className="space-y-1">
+                     {clanMembers.map(m => (
+@@ -528,6 +581,7 @@
+       {myClan && (
+         <ClanSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} clan={myClan} userId={user?.id} onUpdated={invalidateClan} />
+       )}
++      {enlargedImage && <ImageEnlargeModal src={enlargedImage.src} emoji={enlargedImage.emoji} onClose={() => setEnlargedImage(null)} />}
+     </div>
+   );
+ }
+--- a/src/components/social/UserProfileModal.jsx	2026-05-02 16:47:18.940078198 +0000
++++ b/src/components/social/UserProfileModal.jsx	2026-05-02 16:48:30.465678985 +0000
+@@ -1,9 +1,10 @@
+ import React, { useEffect, useState } from 'react';
+ import { friendsApi, notificationsApi } from '@/api/supabaseClient';
++import { supabase } from '@/api/supabaseClient';
+ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+ import { Button } from '@/components/ui/button';
+ import { Badge } from '@/components/ui/badge';
+-import { UserPlus, UserCheck, Star, Trophy, Swords, Zap } from 'lucide-react';
++import { UserPlus, UserCheck, Star, Trophy, Swords, Zap, X, Shield } from 'lucide-react';
+ import { toast } from 'sonner';
+ import { useNavigate } from 'react-router-dom';
+ import { isGodly } from '@/components/game/GameUtils';
+@@ -38,6 +39,8 @@
+ export default function UserProfileModal({ profile, onClose, currentUserId, myProfile }) {
+   const [relationship, setRelationship] = useState(null);
+   const [loading, setLoading] = useState(false);
++  const [enlargedImage, setEnlargedImage] = useState(null);
++  const [clan, setClan] = useState(null);
+   const navigate = useNavigate();
+   const godly = isGodly(profile);
+ 
+@@ -45,6 +48,10 @@
+     if (currentUserId && profile?.created_by) {
+       friendsApi.getRelationship(currentUserId, profile.created_by).then(setRelationship);
+     }
++    if (profile?.created_by) {
++      supabase.from('clan_members').select('*, clan:clans(*)').eq('user_id', profile.created_by).maybeSingle()
++        .then(({ data }) => { if (data?.clan) setClan(data.clan); });
++    }
+   }, [currentUserId, profile?.created_by]);
+ 
+   const isFriend  = relationship?.status === 'accepted';
+@@ -93,7 +100,8 @@
+           <div className="flex items-center gap-4 mb-4">
+             {godly ? (
+               <GodlyWrapper active className="rounded-2xl flex-shrink-0">
+-                <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center text-3xl overflow-hidden">
++                <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center text-3xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
++                  onClick={() => setEnlargedImage({ src: profile?.custom_avatar_url, emoji: AVATAR_PRESETS[profile?.avatar_id] || '🦁' })}>
+                   {profile?.custom_avatar_url
+                     ? <img src={profile.custom_avatar_url} alt="avatar" className="w-full h-full object-cover rounded-2xl" />
+                     : <span>{AVATAR_PRESETS[profile?.avatar_id] || '🦁'}</span>
+@@ -101,7 +109,8 @@
+                 </div>
+               </GodlyWrapper>
+             ) : (
+-              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center text-3xl flex-shrink-0 overflow-hidden">
++              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center text-3xl flex-shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
++                onClick={() => setEnlargedImage({ src: profile?.custom_avatar_url, emoji: AVATAR_PRESETS[profile?.avatar_id] || '🦁' })}>
+                 {profile?.custom_avatar_url
+                   ? <img src={profile.custom_avatar_url} alt="avatar" className="w-full h-full object-cover rounded-2xl" />
+                   : <span>{AVATAR_PRESETS[profile?.avatar_id] || '🦁'}</span>
+@@ -157,6 +166,22 @@
+             </div>
+           )}
+ 
++          {/* Clan */}
++          {clan && (
++            <div className="mb-4 flex items-center gap-3 bg-muted/50 rounded-xl p-3">
++              <div
++                className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xl overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
++                onClick={() => setEnlargedImage({ src: clan.avatar_url, emoji: clan.avatar_emoji || '🛡️' })}
++              >
++                {clan.avatar_url ? <img src={clan.avatar_url} alt="clan" className="w-full h-full object-cover" /> : <span>{clan.avatar_emoji || '🛡️'}</span>}
++              </div>
++              <div className="min-w-0">
++                <p className="text-xs text-muted-foreground flex items-center gap-1"><Shield className="w-3 h-3" /> Clan</p>
++                <p className="text-sm font-semibold truncate">{clan.name}</p>
++              </div>
++            </div>
++          )}
++
+           {/* Actions */}
+           {currentUserId !== profile?.created_by && (
+             <div className="flex gap-2">
+@@ -183,5 +208,18 @@
+         </div>
+       </DialogContent>
+     </Dialog>
++    {enlargedImage && (
++      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setEnlargedImage(null)}>
++        <div className="relative" onClick={e => e.stopPropagation()}>
++          <button onClick={() => setEnlargedImage(null)} className="absolute -top-3 -right-3 w-7 h-7 rounded-full bg-card border border-border flex items-center justify-center z-10 hover:bg-muted">
++            <X className="w-4 h-4" />
++          </button>
++          {enlargedImage.src
++            ? <img src={enlargedImage.src} alt="enlarged" className="max-w-[80vw] max-h-[80vh] rounded-2xl object-contain shadow-2xl" />
++            : <div className="w-48 h-48 rounded-2xl bg-muted flex items-center justify-center text-8xl shadow-2xl">{enlargedImage.emoji}</div>
++          }
++        </div>
++      </div>
++    )}
+   );
+ }
+--- a/src/pages/Settings.jsx	2026-05-02 16:47:18.941666077 +0000
++++ b/src/pages/Settings.jsx	2026-05-02 16:49:04.590522673 +0000
+@@ -11,7 +11,7 @@
+ import { Badge } from '@/components/ui/badge';
+ import {
+   Settings as SettingsIcon, User, Camera, Save, LogOut,
+-  Shield, Palette, RefreshCw, CheckCircle2, AtSign, Globe,
++  Shield, Palette, RefreshCw, CheckCircle2, AtSign, Globe, X,
+ } from 'lucide-react';
+ import { useAuth } from '@/lib/AuthContext';
+ 
+@@ -58,12 +58,18 @@
+   const [hasChanges, setHasChanges] = useState(false);
+   const [activeTab, setActiveTab] = useState('profile');
+   const [region, setRegion] = useState('us');
++  const [myClan, setMyClan] = useState(null);
++  const [enlargedImage, setEnlargedImage] = useState(null);
+   const queryClient = useQueryClient();
+   const originalValues = useRef({});
+   const initialized = useRef(false);
+   const { logout } = useAuth();
+ 
+-  useEffect(() => { auth.me().then(setUser).catch(() => {}); }, []);
++  useEffect(() => { auth.me().then(u => {
++    setUser(u);
++    supabase.from('clan_members').select('*, clan:clans(*)').eq('user_id', u.id).maybeSingle()
++      .then(({ data }) => { if (data?.clan) setMyClan(data.clan); });
++  }).catch(() => {}); }, []);
+ 
+   const { data: profiles, isLoading } = useQuery({
+     queryKey: ['profile'],
+@@ -221,7 +227,8 @@
+       <Card className="overflow-hidden">
+         <div className="px-5 pt-5 pb-4">
+           <div className="flex items-end gap-4 mb-3">
+-            <div className="w-16 h-16 rounded-2xl border-4 border-card bg-card flex items-center justify-center text-3xl shadow-lg overflow-hidden flex-shrink-0">
++            <div className="w-16 h-16 rounded-2xl border-4 border-card bg-card flex items-center justify-center text-3xl shadow-lg overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
++              onClick={() => setEnlargedImage({ src: avatarDisplay.type === 'image' ? avatarDisplay.value : null, emoji: avatarDisplay.value })}>
+               {avatarDisplay.type === 'image'
+                 ? <img src={avatarDisplay.value} alt="avatar" className="w-full h-full object-cover" />
+                 : <span>{avatarDisplay.value}</span>}
+@@ -238,6 +245,12 @@
+           <div className="flex items-center gap-2">
+             <Badge variant="secondary" className="text-xs">Level {profile?.level || 1}</Badge>
+             <Badge variant="outline" className="text-xs">{(profile?.xp || 0).toLocaleString()} XP</Badge>
++            {myClan && (
++              <button onClick={() => setEnlargedImage({ src: myClan.avatar_url, emoji: myClan.avatar_emoji || '🛡️' })}
++                className="flex items-center gap-1 text-xs bg-primary/10 text-primary border border-primary/20 rounded-full px-2 py-0.5 hover:opacity-80 transition-opacity">
++                <span>{myClan.avatar_url ? '🛡️' : myClan.avatar_emoji || '🛡️'}</span> {myClan.name}
++              </button>
++            )}
+             {hasChanges && <Badge className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/20">Unsaved changes</Badge>}
+           </div>
+         </div>
+@@ -424,5 +437,18 @@
+         </motion.div>
+       )}
+     </div>
++    {enlargedImage && (
++      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setEnlargedImage(null)}>
++        <div className="relative" onClick={e => e.stopPropagation()}>
++          <button onClick={() => setEnlargedImage(null)} className="absolute -top-3 -right-3 w-7 h-7 rounded-full bg-card border border-border flex items-center justify-center z-10 hover:bg-muted">
++            <X className="w-4 h-4" />
++          </button>
++          {enlargedImage.src
++            ? <img src={enlargedImage.src} alt="enlarged" className="max-w-[80vw] max-h-[80vh] rounded-2xl object-contain shadow-2xl" />
++            : <div className="w-48 h-48 rounded-2xl bg-muted flex items-center justify-center text-8xl shadow-2xl">{enlargedImage.emoji}</div>
++          }
++        </div>
++      </div>
++    )}
+   );
+ }

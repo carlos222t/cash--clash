@@ -1,0 +1,90 @@
+--- a/src/components/layout/Sidebar.jsx
++++ b/src/components/layout/Sidebar.jsx
+@@ -9,21 +9,20 @@
+ 
+ const PRIMARY_NAV = [
+   { path: '/Dashboard', icon: LayoutDashboard, label: 'Dashboard', description: 'Your hub', tutorialId: 'nav-dashboard' },
+-];
+-
+-const CORE_NAV = [
+-  { path: '/Challenges', icon: Swords, label: '1v1 Clash', description: 'Battle friends', accent: true, tutorialId: 'nav-clash' },
+   { path: '/Budget', icon: Wallet, label: 'Budget', description: 'Track money', tutorialId: 'nav-budget' },
++  { path: '/Challenges', icon: Swords, label: 'Clash', description: 'Battle friends', accent: true, tutorialId: 'nav-clash' },
+ ];
+ 
+-const SECONDARY_NAV = [
+-  { path: '/Friends', icon: Users, label: 'Friends', tutorialId: 'nav-friends' },
++const COMMUNITY_NAV = [
+   { path: '/Leaderboard', icon: Trophy, label: 'Leaderboard', tutorialId: 'nav-leaderboard' },
+-  { path: '/Badges', icon: Star, label: 'Badges', tutorialId: 'nav-badges' },
+-  { path: '/Goals',     icon: Target,   label: 'Goals',     tutorialId: null },
+-  { path: '/Clans',     icon: Shield,   label: 'Clans',     tutorialId: null },
+-  { path: '/StockMarket', icon: TrendingUp,     label: 'Markets',   tutorialId: null },
+-  { path: '/Learn',       icon: GraduationCap, label: 'Learn',     tutorialId: null },
++  { path: '/Clans',       icon: Shield,        label: 'Clans',        tutorialId: null },
++  { path: '/Friends',     icon: Users,         label: 'Friends',      tutorialId: 'nav-friends' },
++];
++
++const EXPLORE_NAV = [
++  { path: '/Goals',       icon: Target,        label: 'Goals',        tutorialId: null },
++  { path: '/StockMarket', icon: TrendingUp,    label: 'Markets',      tutorialId: null },
++  { path: '/Learn',       icon: GraduationCap, label: 'Learn',        tutorialId: null },
+ ];
+ 
+ export default function Sidebar({ collapsed, setCollapsed }) {
+@@ -115,16 +114,33 @@
+         {PRIMARY_NAV.map(item => <NavItem key={item.path} item={item} size="large" />)}
+ 
+         {!collapsed && (
+-          <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/30">Core</p>
++          <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/30">Community</p>
+         )}
+         {collapsed && <div className="my-2 border-t border-sidebar-border/50" />}
+-        {CORE_NAV.map(item => <NavItem key={item.path} item={item} />)}
++        {COMMUNITY_NAV.map(item => <NavItem key={item.path} item={item} />)}
+ 
+         {!collapsed && (
+-          <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/30">Community</p>
++          <p className="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/30">Explore</p>
+         )}
+         {collapsed && <div className="my-2 border-t border-sidebar-border/50" />}
++        {EXPLORE_NAV.map(item => <NavItem key={item.path} item={item} />)}
++      </nav>
+ 
++      {/* Footer */}
++      <div className="p-2 border-t border-sidebar-border space-y-1">
++        {/* Badges */}
++        <Link to="/Badges">
++          <div
++            data-tutorial="nav-badges"
++            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200
++              ${location.pathname === '/Badges'
++                ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-primary/20'
++                : 'text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent'}`}
++          >
++            <Star className="w-5 h-5 flex-shrink-0" />
++            {!collapsed && <span className="text-sm">Badges</span>}
++          </div>
++        </Link>
+         {/* Inbox with badge */}
+         <Link to="/Inbox">
+           <div
+@@ -132,7 +148,7 @@
+             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 relative
+               ${location.pathname === '/Inbox'
+                 ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-primary/20'
+-                : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent'}`}
++                : 'text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent'}`}
+           >
+             <Bell className="w-5 h-5 flex-shrink-0" />
+             {!collapsed && <span className="text-sm font-medium">Inbox</span>}
+@@ -143,12 +159,6 @@
+             )}\n           </div>
+         </Link>
+-
+-        {SECONDARY_NAV.map(item => <NavItem key={item.path} item={item} />)}
+-      </nav>
+-
+-      {/* Footer */}
+-      <div className="p-2 border-t border-sidebar-border space-y-1">
+         <Link to="/Settings">

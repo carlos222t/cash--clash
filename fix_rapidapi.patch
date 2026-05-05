@@ -1,0 +1,60 @@
+--- a/src/pages/StockMarket.jsx
++++ b/src/pages/StockMarket.jsx
+@@ -7,33 +7,29 @@
+ import { TrendingUp, TrendingDown, RefreshCw, Search, BarChart2, Activity } from 'lucide-react';
+ 
+ const API_KEY = import.meta.env.VITE_YAHOO_API_KEY;
+-const BASE_URL = 'https://api.steadyapi.com/v1/markets';
++const RAPIDAPI_HOST = 'yahoo-finance15.p.rapidapi.com';
++const BASE_URL = `https://${RAPIDAPI_HOST}`;
++const HEADERS = {
++  'X-RapidAPI-Key': API_KEY,
++  'X-RapidAPI-Host': RAPIDAPI_HOST,
++};
+ 
+ const DEFAULT_SYMBOLS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA', 'JPM', 'V', 'WMT'];
+ const INDICES = ['^GSPC', '^DJI', '^IXIC'];
+ const INDEX_LABELS = { '^GSPC': 'S&P 500', '^DJI': 'Dow Jones', '^IXIC': 'NASDAQ' };
+ 
+-async function fetchQuote(ticker) {
+-  const type = ticker.startsWith('^') ? 'INDICES' : 'STOCKS';
+-  const url = `${BASE_URL}/quote?ticker=${encodeURIComponent(ticker)}&type=${type}&apikey=${API_KEY}`;
+-  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
++// Fetch multiple quotes in one request — /v1/market/quotes accepts comma-separated tickers
++async function fetchQuotes(symbols) {
++  const url = `${BASE_URL}/v1/market/quotes?ticker=${symbols.map(encodeURIComponent).join(',')}`;
++  const res = await fetch(url, { headers: HEADERS });
+   if (!res.ok) {
+     const text = await res.text().catch(() => String(res.status));
+-    throw new Error(`${ticker}: ${res.status} ${text}`);
++    throw new Error(`Quotes fetch failed: ${res.status} ${text}`);
+   }
+   const data = await res.json();
+-  const body = (data && data.body && typeof data.body === 'object' && !Array.isArray(data.body))
+-    ? data.body : data;
+-  return { symbol: body.symbol || ticker, ...body };
+-}
+-
+-async function fetchQuotes(symbols) {
+-  const results = await Promise.allSettled(symbols.map(fetchQuote));
+-  const failed = results.filter(r => r.status === 'rejected');
+-  if (failed.length > 0) console.warn('[StockMarket] failed:', failed.map(r => r.reason && r.reason.message));
+-  return results
+-    .filter(r => r.status === 'fulfilled')
+-    .map(r => r.value);
++  // Response shape: { body: [ { symbol, regularMarketPrice, ... }, ... ] }
++  const list = Array.isArray(data) ? data : (data?.body ?? []);
++  return list.map(q => ({ symbol: q.symbol || q.ticker || '', ...q }));
+ }
+ 
+ function PriceChange({ change, changePct }) {
+@@ -114,9 +110,6 @@
+         fetchQuotes(allSymbols),
+         fetchQuotes(INDICES),
+       ]);
+-      if (stockData.length === 0 && allSymbols.length > 0) {
+-        throw new Error('All quote requests failed — check your VITE_YAHOO_API_KEY in .env');
+-      }
+       setStocks(stockData);
+       setIndices(indexData);
+       setLastUpdated(new Date());

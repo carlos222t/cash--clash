@@ -1,0 +1,349 @@
+diff --git a/src/components/budget/SavingsTracker.jsx b/src/components/budget/SavingsTracker.jsx
+new file mode 100644
+index 0000000..38c6429
+--- /dev/null
++++ b/src/components/budget/SavingsTracker.jsx
+@@ -0,0 +1,147 @@
++import React, { useState } from 'react';
++import { PiggyBank } from 'lucide-react';
++
++const tokens = {
++  gold:       '#B8973A',
++  goldDim:    'rgba(184,151,58,0.15)',
++  goldBorder: 'rgba(184,151,58,0.25)',
++  surface:    '#111114',
++  border:     'rgba(255,255,255,0.07)',
++  textPrimary:'#F0EDE6',
++  textMuted:  'rgba(240,237,230,0.45)',
++};
++
++const CATEGORIES = ['Savings', 'Investments', 'Emergency Fund', 'Retirement', 'Other'];
++
++export default function SavingsTracker({ onSubmit }) {
++  const [amount, setAmount]     = useState('');
++  const [category, setCategory] = useState('Savings');
++  const [note, setNote]         = useState('');
++  const [loading, setLoading]   = useState(false);
++
++  const handleSubmit = async (e) => {
++    e.preventDefault();
++    if (!amount || isNaN(amount) || Number(amount) <= 0) return;
++    setLoading(true);
++    await onSubmit({
++      title: note || category,
++      amount: Number(amount),
++      category,
++      type: 'expense',       // counts as expense so it leaves spending money
++      is_saving: true,       // flag so TransactionList can colour it white
++      date: new Date().toISOString().split('T')[0],
++      notes: note,
++    });
++    setAmount('');
++    setNote('');
++    setLoading(false);
++  };
++
++  return (
++    <div style={{ padding: '18px 18px 20px' }}>
++      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
++        <div style={{
++          width: 32, height: 32, borderRadius: 8,
++          background: tokens.goldDim,
++          border: `1px solid ${tokens.goldBorder}`,
++          display: 'flex', alignItems: 'center', justifyContent: 'center',
++        }}>
++          <PiggyBank style={{ width: 15, height: 15, color: tokens.gold }} />
++        </div>
++        <div>
++          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: tokens.textPrimary }}>Log Money Saved / Invested</p>
++          <p style={{ margin: 0, fontSize: 11, color: tokens.textMuted }}>Updates your Savings Journey &amp; active challenges</p>
++        </div>
++      </div>
++
++      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
++        {/* Amount */}
++        <div>
++          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: tokens.textMuted, marginBottom: 5, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
++            Amount ($)
++          </label>
++          <input
++            type="number"
++            min="0.01"
++            step="0.01"
++            placeholder="0.00"
++            value={amount}
++            onChange={e => setAmount(e.target.value)}
++            required
++            style={{
++              width: '100%', boxSizing: 'border-box',
++              background: tokens.surface,
++              border: `1px solid rgba(184,151,58,0.3)`,
++              borderRadius: 8, padding: '9px 12px',
++              color: tokens.textPrimary, fontSize: 16, fontWeight: 600,
++              outline: 'none',
++            }}
++          />
++        </div>
++
++        {/* Category */}
++        <div>
++          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: tokens.textMuted, marginBottom: 5, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
++            Category
++          </label>
++          <select
++            value={category}
++            onChange={e => setCategory(e.target.value)}
++            style={{
++              width: '100%', boxSizing: 'border-box',
++              background: tokens.surface,
++              border: `1px solid rgba(255,255,255,0.1)`,
++              borderRadius: 8, padding: '9px 12px',
++              color: tokens.textPrimary, fontSize: 13,
++              outline: 'none',
++            }}
++          >
++            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
++          </select>
++        </div>
++
++        {/* Note */}
++        <div>
++          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: tokens.textMuted, marginBottom: 5, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
++            Note (optional)
++          </label>
++          <input
++            type="text"
++            placeholder="e.g. Monthly ISA deposit"
++            value={note}
++            onChange={e => setNote(e.target.value)}
++            style={{
++              width: '100%', boxSizing: 'border-box',
++              background: tokens.surface,
++              border: `1px solid rgba(255,255,255,0.1)`,
++              borderRadius: 8, padding: '9px 12px',
++              color: tokens.textPrimary, fontSize: 13,
++              outline: 'none',
++            }}
++          />
++        </div>
++
++        <button
++          type="submit"
++          disabled={loading}
++          style={{
++            marginTop: 4,
++            background: tokens.gold,
++            color: '#0C0C0E',
++            border: 'none', borderRadius: 8,
++            padding: '10px 0', width: '100%',
++            fontSize: 12, fontWeight: 700,
++            letterSpacing: '0.06em', textTransform: 'uppercase',
++            cursor: loading ? 'not-allowed' : 'pointer',
++            opacity: loading ? 0.7 : 1,
++            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
++            fontFamily: "'DM Sans', sans-serif",
++          }}
++        >
++          <PiggyBank style={{ width: 13, height: 13 }} />
++          {loading ? 'Saving…' : 'Log Savings'}
++        </button>
++      </form>
++    </div>
++  );
++}
+diff --git a/src/components/budget/TransactionList.jsx b/src/components/budget/TransactionList.jsx
+index 62bbcf9..bb8818d 100644
+--- a/src/components/budget/TransactionList.jsx
++++ b/src/components/budget/TransactionList.jsx
+@@ -261,18 +261,18 @@ function CalendarModal({ open, onClose, allTransactions }) {
+                   }}>
+                     <div style={{
+                       width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+-                      background: tx.type === 'income' ? t.greenDim : t.redDim,
+-                      border: `1px solid ${tx.type === 'income' ? t.greenBorder : t.redBorder}`,
++                      background: tx.is_saving ? 'rgba(255,255,255,0.07)' : tx.type === 'income' ? t.greenDim : t.redDim,
++                      border: `1px solid ${tx.is_saving ? 'rgba(255,255,255,0.15)' : tx.type === 'income' ? t.greenBorder : t.redBorder}`,
+                       display: 'flex', alignItems: 'center', justifyContent: 'center',
+                     }}>
+-                      <CategoryIcon category={tx.category} size={13} color={tx.type === 'income' ? t.green : t.red} />
++                      <CategoryIcon category={tx.category} size={13} color={tx.is_saving ? '#F0EDE6' : tx.type === 'income' ? t.green : t.red} />
+                     </div>
+                     <div style={{ flex: 1, minWidth: 0 }}>
+                       <p style={{ fontSize: 12, fontWeight: 500, color: t.text, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.title}</p>
+                       <p style={{ fontSize: 10, color: t.muted, margin: 0, textTransform: 'capitalize' }}>{tx.category}</p>
+                     </div>
+-                    <span style={{ fontSize: 12, fontWeight: 700, color: tx.type === 'income' ? t.green : t.red, flexShrink: 0 }}>
+-                      {tx.type === 'income' ? '+' : '-'}${tx.amount.toFixed(2)}
++                    <span style={{ fontSize: 12, fontWeight: 700, color: tx.is_saving ? '#F0EDE6' : tx.type === 'income' ? t.green : t.red, flexShrink: 0 }}>
++                      {tx.is_saving ? '💰' : tx.type === 'income' ? '+' : '-'}${tx.amount.toFixed(2)}
+                     </span>
+                   </div>
+                 ))}
+@@ -498,11 +498,11 @@ export default function TransactionList({ transactions }) {
+                         {/* Icon */}
+                         <div style={{
+                           width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+-                          background: tx.type === 'income' ? t.greenDim : t.redDim,
+-                          border: `1px solid ${tx.type === 'income' ? t.greenBorder : t.redBorder}`,
++                          background: tx.is_saving ? 'rgba(255,255,255,0.07)' : tx.type === 'income' ? t.greenDim : t.redDim,
++                          border: `1px solid ${tx.is_saving ? 'rgba(255,255,255,0.15)' : tx.type === 'income' ? t.greenBorder : t.redBorder}`,
+                           display: 'flex', alignItems: 'center', justifyContent: 'center',
+                         }}>
+-                          <CategoryIcon category={tx.category} size={13} color={tx.type === 'income' ? t.green : t.red} />
++                          <CategoryIcon category={tx.category} size={13} color={tx.is_saving ? '#F0EDE6' : tx.type === 'income' ? t.green : t.red} />
+                         </div>
+ 
+                         {/* Details */}
+@@ -525,10 +525,12 @@ export default function TransactionList({ transactions }) {
+                         </div>
+ 
+                         {/* Amount */}
+-                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 13, fontWeight: 700, color: tx.type === 'income' ? t.green : t.red, flexShrink: 0 }}>
+-                          {tx.type === 'income'
+-                            ? <ArrowUpRight style={{ width: 12, height: 12 }} />
+-                            : <ArrowDownRight style={{ width: 12, height: 12 }} />}
++                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 13, fontWeight: 700, color: tx.is_saving ? '#F0EDE6' : tx.type === 'income' ? t.green : t.red, flexShrink: 0 }}>
++                          {tx.is_saving
++                            ? <PiggyBank style={{ width: 12, height: 12 }} />
++                            : tx.type === 'income'
++                              ? <ArrowUpRight style={{ width: 12, height: 12 }} />
++                              : <ArrowDownRight style={{ width: 12, height: 12 }} />}
+                           ${tx.amount.toLocaleString()}
+                         </div>
+ 
+diff --git a/src/pages/Budget.jsx b/src/pages/Budget.jsx
+index 62cbf1d..eac7a78 100644
+--- a/src/pages/Budget.jsx
++++ b/src/pages/Budget.jsx
+@@ -1,7 +1,7 @@
+ import React, { useState, useEffect } from 'react';
+-import { auth, entities } from '@/api/supabaseClient';
++import { auth, entities, supabase } from '@/api/supabaseClient';
+ import { useQuery, useQueryClient } from '@tanstack/react-query';
+-import { Plus, DollarSign, LayoutGrid, RefreshCw, Calculator } from 'lucide-react';
++import { Plus, DollarSign, LayoutGrid, RefreshCw, Calculator, PiggyBank } from 'lucide-react';
+ import { motion, AnimatePresence } from 'framer-motion';
+ import { toast } from 'sonner';
+ import { format, addWeeks, addDays, addMonths, parseISO } from 'date-fns';
+@@ -9,6 +9,7 @@ import TransactionForm from '../components/budget/TransactionForm';
+ import TransactionList from '../components/budget/TransactionList';
+ import BudgetCalculator from '../components/budget/BudgetCalculator';
+ import AutoTransactions from '../components/budget/AutoTransactions';
++import SavingsTracker from '../components/budget/SavingsTracker';
+ import { XP_ACTIONS } from '../components/game/GameUtils';
+ 
+ /* ─── Design tokens (mirrored from Dashboard) ────────────────────────────── */
+@@ -38,6 +39,7 @@ function nextDateAfter(currentDate, frequency) {
+ export default function Budget() {
+   const [user, setUser]       = useState(null);
+   const [showForm, setShowForm] = useState(false);
++  const [activeTab, setActiveTab] = useState('transactions'); // 'transactions' | 'savings'
+   const queryClient           = useQueryClient();
+ 
+   useEffect(() => { auth.me().then(setUser).catch(() => {}); }, []);
+@@ -124,6 +126,52 @@ export default function Budget() {
+     setShowForm(false);
+   };
+ 
++  const handleAddSaving = async (data) => {
++    // 1. Create transaction (type=expense, is_saving=true → white in list)
++    await entities.Transaction.create({ ...data, created_by: user?.id });
++    const p = await ensureProfile();
++
++    // 2. Add to total_saved on profile
++    const newTotalSaved = (p.total_saved || 0) + data.amount;
++
++    // 3. XP + badges
++    const newXP = (p.xp || 0) + XP_ACTIONS.LOG_TRANSACTION;
++    const badges = [...(p.badges || [])];
++    const txCount = (transactions?.length || 0) + 1;
++    if (txCount === 1  && !badges.includes('first_track')) badges.push('first_track');
++    if (txCount >= 10  && !badges.includes('penny_wise'))  badges.push('penny_wise');
++    if (newTotalSaved >= 100  && !badges.includes('saver_100'))  badges.push('saver_100');
++    if (newTotalSaved >= 1000 && !badges.includes('saver_1000')) badges.push('saver_1000');
++
++    await entities.UserProfile.update(p.id, {
++      xp: newXP,
++      badges,
++      total_saved: newTotalSaved,
++    });
++
++    // 4. Update active challenge savings
++    const { data: activeChallenges } = await supabase
++      .from('challenges')
++      .select('id, challenger_id, opponent_id')
++      .eq('status', 'active')
++      .or(`challenger_id.eq.${user.id},opponent_id.eq.${user.id}`);
++
++    if (activeChallenges) {
++      for (const ch of activeChallenges) {
++        const field = ch.challenger_id === user.id ? 'challenger_savings' : 'opponent_savings';
++        await supabase
++          .from('challenges')
++          .update({ [field]: newTotalSaved })
++          .eq('id', ch.id);
++      }
++    }
++
++    queryClient.invalidateQueries({ queryKey: ['transactions'] });
++    queryClient.invalidateQueries({ queryKey: ['profile'] });
++    queryClient.invalidateQueries({ queryKey: ['challenges'] });
++    toast.success(`💰 $${data.amount} saved! +${XP_ACTIONS.LOG_TRANSACTION} XP`);
++  };
++
+   const handleSaveBudget = async (budgetData) => {
+     const p = await ensureProfile();
+     await entities.UserProfile.update(p.id, budgetData);
+@@ -478,19 +526,43 @@ export default function Budget() {
+               overflow: 'hidden',
+             }}
+           >
+-            {/* Section label */}
++            {/* Section tabs */}
+             <div style={{
+-              display: 'flex', alignItems: 'center', gap: 8,
+-              padding: '14px 18px 12px',
++              display: 'flex', alignItems: 'center', gap: 0,
++              padding: '10px 14px 0',
+               borderBottom: `1px solid ${tokens.border}`,
+             }}>
+-              <LayoutGrid style={{ width: 14, height: 14, color: tokens.gold }} />
+-              <span style={{
+-                fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
+-                textTransform: 'uppercase', color: tokens.textMuted,
+-              }}>Transactions</span>
++              {[
++                { id: 'transactions', icon: <LayoutGrid style={{ width: 13, height: 13 }} />, label: 'Transactions' },
++                { id: 'savings',      icon: <PiggyBank  style={{ width: 13, height: 13 }} />, label: 'Money Saved / Invested' },
++              ].map(tab => (
++                <button
++                  key={tab.id}
++                  onClick={() => setActiveTab(tab.id)}
++                  style={{
++                    display: 'flex', alignItems: 'center', gap: 6,
++                    padding: '8px 14px',
++                    background: 'transparent',
++                    border: 'none',
++                    borderBottom: activeTab === tab.id ? `2px solid ${tokens.gold}` : '2px solid transparent',
++                    cursor: 'pointer',
++                    fontSize: 11, fontWeight: 600, letterSpacing: '0.08em',
++                    textTransform: 'uppercase',
++                    color: activeTab === tab.id ? tokens.gold : tokens.textMuted,
++                    fontFamily: "'DM Sans', sans-serif",
++                    marginBottom: -1,
++                    whiteSpace: 'nowrap',
++                    transition: 'color 0.15s',
++                  }}
++                >
++                  {tab.icon}{tab.label}
++                </button>
++              ))}
+             </div>
+-            <TransactionList transactions={transactions} />
++            {activeTab === 'transactions'
++              ? <TransactionList transactions={transactions} />
++              : <SavingsTracker onSubmit={handleAddSaving} />
++            }
+           </motion.div>
+ 
+           {/* Sidebar — 1/3 width */}

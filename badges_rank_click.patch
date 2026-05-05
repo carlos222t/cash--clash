@@ -1,0 +1,160 @@
+--- a/src/pages/Badges.jsx
++++ b/src/pages/Badges.jsx
+@@ -74,6 +74,7 @@
+ export default function Badges() {
+   const [user, setUser] = useState(null);
+   const [pfpZoom, setPfpZoom] = useState(false);
++  const [selectedRank, setSelectedRank] = useState(null);
+   useEffect(() => { auth.me().then(setUser).catch(() => {}); }, []);
+ 
+   const { data: profiles } = useQuery({
+@@ -91,13 +92,13 @@
+   const level = getLevelFromXP(xp);
+ 
+   const RANKS = [
+-    { name: 'Rookie Saver',  minLevel: 1,  img: '/badges/rookie_saver.png'  },
+-    { name: 'Penny Pincher', minLevel: 5,  img: '/badges/pennypincher.png'  },
+-    { name: 'Smart Spender', minLevel: 10, img: '/badges/smartspender.png'  },
+-    { name: 'Savings Pro',   minLevel: 15, img: '/badges/savingspro.png'    },
+-    { name: 'Budget Boss',   minLevel: 20, img: '/badges/budgetboss.png'    },
+-    { name: 'Money Master',  minLevel: 30, img: '/badges/moneymaster.png'   },
+-    { name: 'Cash Legend',   minLevel: 40, img: '/badges/cashlegend.png'    },
++    { name: 'Rookie Saver',  minLevel: 1,  img: '/badges/rookie_saver.png',  desc: 'Every legend starts somewhere. Reach Level 1 to earn this rank.' },
++    { name: 'Penny Pincher', minLevel: 5,  img: '/badges/pennypincher.png',  desc: 'You are getting serious about your finances. Reach Level 5 to unlock.' },
++    { name: 'Smart Spender', minLevel: 10, img: '/badges/smartspender.png',  desc: 'Your money habits are sharpening. Reach Level 10 to unlock.' },
++    { name: 'Savings Pro',   minLevel: 15, img: '/badges/savingspro.png',    desc: 'A true savings professional. Reach Level 15 to unlock.' },
++    { name: 'Budget Boss',   minLevel: 20, img: '/badges/budgetboss.png',    desc: 'You run your budget like a boss. Reach Level 20 to unlock.' },
++    { name: 'Money Master',  minLevel: 30, img: '/badges/moneymaster.png',   desc: 'Complete mastery of personal finance. Reach Level 30 to unlock.' },
++    { name: 'Cash Legend',   minLevel: 40, img: '/badges/cashlegend.png',    desc: 'The pinnacle of Cash Clash greatness. Reach Level 40 to become a legend.' },
+   ];
+ 
+   const SectionLabel = ({ icon: Icon, text }) => (
+@@ -148,16 +149,23 @@
+               const achieved = level >= rank.minLevel;
+               const isCurrent = achieved && rank.minLevel === Math.max(...RANKS.filter(r => level >= r.minLevel).map(r => r.minLevel));
+               return (
+-                <div key={rank.name} style={{
+-                  textAlign: 'center', padding: '12px 8px', borderRadius: 14,
+-                  background: isCurrent ? T.goldDim : achieved ? T.surfaceAlt : 'rgba(255,255,255,0.02)',
+-                  border: `1px solid ${isCurrent ? T.goldBorder : achieved ? 'rgba(184,151,58,0.12)' : T.border}`,
+-                  transform: isCurrent ? 'scale(1.05)' : 'none',
+-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+-                  opacity: achieved ? 1 : 0.3,
+-                }}>
++                <div
++                  key={rank.name}
++                  onClick={() => setSelectedRank({ ...rank, achieved, isCurrent })}
++                  style={{
++                    textAlign: 'center', padding: '12px 8px', borderRadius: 14, cursor: 'pointer',
++                    background: isCurrent ? T.goldDim : achieved ? T.surfaceAlt : 'rgba(255,255,255,0.02)',
++                    border: `1px solid ${isCurrent ? T.goldBorder : achieved ? 'rgba(184,151,58,0.12)' : T.border}`,
++                    transform: isCurrent ? 'scale(1.05)' : 'none',
++                    transition: 'all 0.18s ease',
++                    opacity: achieved ? 1 : 0.45,
++                  }}
++                  onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.borderColor = 'rgba(184,151,58,0.5)'; }}
++                  onMouseLeave={e => { e.currentTarget.style.opacity = achieved ? '1' : '0.45'; e.currentTarget.style.borderColor = isCurrent ? T.goldBorder : achieved ? 'rgba(184,151,58,0.12)' : T.border; }}
++                >
+                   <img src={rank.img} alt={rank.name} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', margin: '0 auto 8px', display: 'block', filter: achieved ? 'none' : 'grayscale(1)' }} />
+                   <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: isCurrent ? T.gold : T.textMuted, lineHeight: 1.2 }}>{rank.name}</p>
++                  <p style={{ margin: '3px 0 0', fontSize: 9, color: T.textDim }}>Lv {rank.minLevel}</p>
+                 </div>
+               );
+             })}
+@@ -228,6 +236,96 @@
+         </div>
+       </div>
+ 
++
++      {/* RANK DETAIL MODAL */}
++      {selectedRank && (
++        <div
++          style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)' }}
++          onClick={() => setSelectedRank(null)}
++        >
++          <motion.div
++            initial={{ scale: 0.85, opacity: 0, y: 20 }}
++            animate={{ scale: 1, opacity: 1, y: 0 }}
++            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
++            onClick={e => e.stopPropagation()}
++            style={{
++              background: T.surfaceAlt,
++              border: `1px solid ${selectedRank.isCurrent ? T.goldBorder : selectedRank.achieved ? 'rgba(184,151,58,0.3)' : T.border}`,
++              borderRadius: 24,
++              padding: '36px 32px',
++              maxWidth: 340,
++              width: '90vw',
++              textAlign: 'center',
++              position: 'relative',
++              boxShadow: selectedRank.achieved ? `0 0 60px rgba(184,151,58,0.2), 0 24px 64px rgba(0,0,0,0.6)` : '0 24px 64px rgba(0,0,0,0.6)',
++            }}
++          >
++            {/* Close */}
++            <button
++              onClick={() => setSelectedRank(null)}
++              style={{ position: 'absolute', top: 14, right: 14, width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: `1px solid ${T.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMuted, fontSize: 16, lineHeight: 1 }}
++            >×</button>
++
++            {/* Badge image — large + focused */}
++            <div style={{ position: 'relative', width: 160, height: 160, margin: '0 auto 24px' }}>
++              {selectedRank.achieved && (
++                <div style={{ position: 'absolute', inset: -12, borderRadius: '50%', background: 'radial-gradient(circle, rgba(184,151,58,0.25) 0%, transparent 70%)', pointerEvents: 'none' }} />
++              )}
++              <img
++                src={selectedRank.img}
++                alt={selectedRank.name}
++                style={{
++                  width: '100%', height: '100%', objectFit: 'contain', borderRadius: '50%',
++                  filter: selectedRank.achieved
++                    ? 'drop-shadow(0 0 24px rgba(184,151,58,0.6)) drop-shadow(0 0 8px rgba(184,151,58,0.4))'
++                    : 'grayscale(1) brightness(0.35)',
++                }}
++              />
++              {!selectedRank.achieved && (
++                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
++                  <Lock style={{ width: 36, height: 36, color: 'rgba(255,255,255,0.5)' }} />
++                </div>
++              )}
++            </div>
++
++            {/* Name */}
++            <p style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 800, color: selectedRank.isCurrent ? T.gold : selectedRank.achieved ? T.text : T.textMuted, letterSpacing: '-0.01em', fontFamily: "'Cormorant Garamond', serif" }}>
++              {selectedRank.name}
++            </p>
++
++            {/* Level requirement pill */}
++            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 14px', borderRadius: 99, marginBottom: 16, background: selectedRank.achieved ? T.goldDim : 'rgba(255,255,255,0.04)', border: `1px solid ${selectedRank.achieved ? T.goldBorder : T.border}` }}>
++              <Star style={{ width: 11, height: 11, color: selectedRank.achieved ? T.gold : T.textMuted }} />
++              <span style={{ fontSize: 12, fontWeight: 700, color: selectedRank.achieved ? T.gold : T.textMuted, letterSpacing: '0.04em' }}>
++                Level {selectedRank.minLevel} required
++              </span>
++            </div>
++
++            {/* Description */}
++            <p style={{ margin: '0 0 20px', fontSize: 13, color: T.textMuted, lineHeight: 1.6 }}>
++              {selectedRank.desc}
++            </p>
++
++            {/* Status badge */}
++            {selectedRank.isCurrent ? (
++              <div style={{ padding: '8px 20px', borderRadius: 10, background: T.goldDim, border: `1px solid ${T.goldBorder}` }}>
++                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: T.gold, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Current Rank</p>
++                <p style={{ margin: '2px 0 0', fontSize: 11, color: T.textMuted }}>You are Level {level}</p>
++              </div>
++            ) : selectedRank.achieved ? (
++              <div style={{ padding: '8px 20px', borderRadius: 10, background: 'rgba(110,175,122,0.1)', border: '1px solid rgba(110,175,122,0.25)' }}>
++                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#6EAF7A', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Achieved</p>
++              </div>
++            ) : (
++              <div style={{ padding: '8px 20px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: `1px solid ${T.border}` }}>
++                <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: T.textMuted, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Locked</p>
++                <p style={{ margin: '2px 0 0', fontSize: 11, color: T.textDim }}>{selectedRank.minLevel - level} more level{selectedRank.minLevel - level !== 1 ? 's' : ''} to go</p>
++              </div>
++            )}
++          </motion.div>
++        </div>
++      )}
++
+       {/* PFP MODAL */}
+       {pfpZoom && (
+         <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(8px)' }} onClick={() => setPfpZoom(false)}>

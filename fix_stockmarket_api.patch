@@ -1,0 +1,40 @@
+--- a/src/pages/StockMarket.jsx
++++ b/src/pages/StockMarket.jsx
+@@ -7,20 +7,30 @@
+ import { TrendingUp, TrendingDown, RefreshCw, Search, BarChart2, Activity } from 'lucide-react';
+ 
+ const API_KEY = import.meta.env.VITE_YAHOO_API_KEY;
+-const BASE_URL = 'https://api.steadyapi.com/v1';
++const BASE_URL = 'https://api.steadyapi.com/v1/markets';
+ 
+ const DEFAULT_SYMBOLS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA', 'JPM', 'V', 'WMT'];
+ const INDICES = ['^GSPC', '^DJI', '^IXIC'];
+ const INDEX_LABELS = { '^GSPC': 'S&P 500', '^DJI': 'Dow Jones', '^IXIC': 'NASDAQ' };
+ 
+-async function fetchQuotes(symbols) {
+-  const joined = symbols.join(',');
+-  const res = await fetch(`${BASE_URL}/finance/quote?symbols=${joined}`, {
+-    headers: { 'x-api-key': API_KEY },
++async function fetchQuote(ticker) {
++  const type = ticker.startsWith('^') ? 'INDICES' : 'STOCKS';
++  const url = `${BASE_URL}/quote?ticker=${encodeURIComponent(ticker)}&type=${type}`;
++  const res = await fetch(url, {
++    headers: { 'Authorization': `Bearer ${API_KEY}`, 'Accept': 'application/json' },
+   });
+-  if (!res.ok) throw new Error('Failed to fetch quotes');
++  if (!res.ok) throw new Error(`Failed to fetch ${ticker}`);
+   const data = await res.json();
+-  return data?.quoteResponse?.result || [];
++  // SteadyAPI returns the quote directly in `body`
++  const body = data?.body ?? data;
++  return { symbol: ticker, ...body };
++}
++
++async function fetchQuotes(symbols) {
++  const results = await Promise.allSettled(symbols.map(fetchQuote));
++  return results
++    .filter(r => r.status === 'fulfilled')
++    .map(r => r.value);
+ }
+ 
+ function PriceChange({ change, changePct }) {
