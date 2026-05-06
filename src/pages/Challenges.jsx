@@ -861,7 +861,12 @@ export default function Challenges() {
                                 onMouseEnter={e => e.currentTarget.style.background = T.surfaceHigh}
                                 onMouseLeave={e => e.currentTarget.style.background = 'none'}
                               >
-                                <span style={{ fontSize: 20 }}>{AVATAR_PRESETS[fp.avatar_id] || '🦁'}</span>
+                                <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1.5px solid rgba(184,151,58,0.35)', background: 'rgba(184,151,58,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+  {fp.custom_avatar_url
+    ? <img src={fp.custom_avatar_url} alt={fp.display_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+    : <span style={{ fontSize: 14, fontWeight: 700, color: '#B8973A' }}>{(fp.display_name || fp.username || '?')[0].toUpperCase()}</span>
+  }
+</div>
                                 <div>
                                   <p style={{ fontSize: 12, fontWeight: 600, color: T.text, margin: 0 }}>{fp.display_name}</p>
                                   <p style={{ fontSize: 10, color: T.textMuted, margin: 0 }}>@{fp.username}</p>
