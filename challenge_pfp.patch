@@ -1,0 +1,16 @@
+--- a/src/pages/Challenges.jsx
++++ b/src/pages/Challenges.jsx
+@@ -634,7 +634,14 @@ export default function Challenges() {
+                             <button key={fp.id} type="button"
+                               onClick={() => { setForm({ ...form, opponent_username: fp.username }); setShowFriendPicker(false); }}
+                               className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-muted text-left transition-colors">
+-                              <span className="text-lg">{AVATAR_PRESETS[fp.avatar_id] || '🦁'}</span>
++                              <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1.5px solid rgba(184,151,58,0.35)', background: 'rgba(184,151,58,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
++                                {fp.custom_avatar_url
++                                  ? <img src={fp.custom_avatar_url} alt={fp.display_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
++                                  : <span style={{ fontSize: 14, fontWeight: 700, color: '#B8973A' }}>{(fp.display_name || fp.username || '?')[0].toUpperCase()}</span>
++                                }
++                              </div>
+                               <div>
+                                 <p className="text-sm font-medium">{fp.display_name}</p>
+                                 <p className="text-xs text-muted-foreground">@{fp.username}</p>
