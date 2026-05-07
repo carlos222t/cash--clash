@@ -51,29 +51,6 @@ async function fetchYahoo(symbol, range = "1mo", interval = "1d") {
   if (!result) throw new Error(`No data for ${symbol}`);
   return result;
 }
-  const result = json?.chart?.result?.[0];
-  if (!result) throw new Error(`No data for ${symbol}`);
-  return result;
-}
-
-function buildQuote(symbol, result) {
-  const meta = result.meta ?? {};
-  const ts = result.timestamp ?? [];
-  const closes = result.indicators?.quote?.[0]?.close ?? [];
-  const sparkline = ts
-    .map((t, i) => ({ t, c: closes[i] }))
-    .filter((p) => typeof p.c === "number" && !isNaN(p.c));
-  const price = meta.regularMarketPrice ?? sparkline.at(-1)?.c ?? 0;
-  const previousClose = meta.chartPreviousClose ?? meta.previousClose ?? price;
-  const change = price - previousClose;
-  const changePercent = previousClose ? (change / previousClose) * 100 : 0;
-  return {
-    symbol, name: COMPANY_NAMES[symbol] ?? symbol,
-    price, previousClose, change, changePercent,
-    currency: meta.currency ?? "USD", sparkline,
-  };
-}
-
 function computeRating(history, meta) {
   if (history.length < 30) return {
     score: 50, label: "Hold", horizon: "6–12 months",
