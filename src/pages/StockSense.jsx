@@ -22,11 +22,35 @@ const COMPANY_NAMES = {
 
 // ─── Yahoo Finance via Vite proxy (fixes CORS) ────────────────────────────────
 
-async function fetchYahoo(symbol, range = "1mo", interval = "1d") {
-  const url = `/yahoo-finance/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}&includePrePost=false`;
-  const res = await fetch(url);
+aasync function fetchYahoo(symbol, range = "1mo", interval = "1d") {
+  const isProd = import.meta.env.PROD;
+  const url = isProd
+    ? `https://yahoo-finance15.p.rapidapi.com/api/v1/markets/stock/history?symbol=${encodeURIComponent(symbol)}&interval=${interval}&diffandsplits=false`
+    : `/yahoo-finance/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}&includePrePost=false`;
+
+  const res = await fetch(url, isProd ? {
+    headers: {
+      'x-rapidapi-host': 'yahoo-finance15.p.rapidapi.com',
+      'x-rapidapi-key': import.meta.env.VITE_YAHOO_API_KEY,
+    }
+  } : {});
+
   if (!res.ok) throw new Error(`Yahoo ${symbol} ${res.status}`);
   const json = await res.json();
+
+  // RapidAPI returns different shape — normalize it
+  if (isProd) {
+    const items = json?.body ?? [];
+    const sparkline = items.map(d => ({ t: d.date, c: parseFloat(d.close) })).filter(p => !isNaN(p.c));
+    const price = sparkline.at(-1)?.c ?? 0;
+    const previousClose = sparkline.at(-2)?.c ?? price;
+    return { meta: { regularMarketPrice: price, chartPreviousClose: previousClose, currency: 'USD' }, timestamp: sparkline.map(p => p.t), indicators: { quote: [{ close: sparkline.map(p => p.c) }] } };
+  }
+
+  const result = json?.chart?.result?.[0];
+  if (!result) throw new Error(`No data for ${symbol}`);
+  return result;
+}
   const result = json?.chart?.result?.[0];
   if (!result) throw new Error(`No data for ${symbol}`);
   return result;
