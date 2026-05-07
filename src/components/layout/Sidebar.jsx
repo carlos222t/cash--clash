@@ -22,7 +22,7 @@ const COMMUNITY_NAV = [
 
 const EXPLORE_NAV = [
   { path: '/GoalGuide', icon: Target, label: 'Goal Guide', tutorialId: null },
-  { path: '/StockSense', icon: BarChart2, label: 'Stock Market', tutorialId: null },
+  { path: '/StockMarket', icon: BarChart2, label: 'Stock Market', tutorialId: null },
   { path: '/Learn',       icon: GraduationCap, label: 'Learn',   tutorialId: null },
 ];
 
