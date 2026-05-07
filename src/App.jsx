@@ -8,7 +8,6 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { TutorialProvider } from '@/lib/TutorialContext';
 import GoalGuide from './pages/GoalGuide'; 
 import StockSense from './pages/StockSense';
-
 import AppLayout from './components/layout/AppLayout';
 import TutorialOverlay from './components/layout/TutorialOverlay';
 import Dashboard from './pages/Dashboard';
@@ -24,6 +23,7 @@ import Goals from './pages/Goals';
 import Clans from './pages/Clans';
 import StockMarket from './pages/StockMarket';
 import Learn from './pages/Learn';
+import Study from './pages/Study';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isAuthenticated } = useAuth();
@@ -60,7 +60,9 @@ const AuthenticatedApp = () => {
           <Route path="/Learn" element={<Learn />} />
           <Route path="/GoalGuide" element={<GoalGuide />} />
           <Route path="/StockSense" element={<StockSense />} />
+          <Route path="/Study" element={<Study />} />
         </Route>
+    
         <Route path="*" element={<PageNotFound />} />
       </Routes>
     </>

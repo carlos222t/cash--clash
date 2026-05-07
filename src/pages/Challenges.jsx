@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import {
   Swords, Plus, Trophy, Clock, CheckCircle, Target, AtSign, Info, Users, Zap,
   ChevronDown, ChevronUp, CheckCircle2, Circle, Flame, BookOpen, Upload, AlertTriangle,
-  ExternalLink, HelpCircle, X, Camera,
+  ExternalLink, HelpCircle, X, Camera, ShieldCheck, Eye, MessageSquare, ThumbsUp, ThumbsDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -553,7 +553,7 @@ function HYSAQuiz({ onComplete, onFail }) {
 }
 
 // ── STANDARD QUIZ COMPONENT ────────────────────────────────────────────────
-function StandardQuiz({ questions, passingScore, onComplete, onFail }) {
+function StandardQuiz({ questions, passingScore, onComplete, onFail, cooldownKey }) {
   const [answers, setAnswers] = useState(Array(questions.length).fill(null));
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(null);
@@ -566,6 +566,11 @@ function StandardQuiz({ questions, passingScore, onComplete, onFail }) {
       if (correct >= passingScore) {
         onComplete();
       } else {
+        // Persist 24-hour cooldown so the modal blocks retakes
+        if (cooldownKey) {
+          const cooldownEnd = new Date(Date.now() + 24 * 3600 * 1000);
+          localStorage.setItem(cooldownKey, cooldownEnd.toISOString());
+        }
         onFail(`You scored ${correct}/${questions.length}. Need ${passingScore}/${questions.length} to pass. 1-day cooldown applied.`);
       }
     }, 1200);
@@ -834,6 +839,22 @@ function TaskCompletionModal({ task, userId, onComplete, onClose }) {
 
   const type = task.completionType || 'direct';
   const hasLink = !!task.link;
+  const quizCooldownKey = type === 'quiz' ? `quiz_cooldown_${task.id}_${userId}` : null;
+
+  // Block quiz retake if cooldown active
+  useEffect(() => {
+    if (!quizCooldownKey) return;
+    const stored = localStorage.getItem(quizCooldownKey);
+    if (stored) {
+      const cooldownEnd = new Date(stored);
+      if (new Date() < cooldownEnd) {
+        const hoursLeft = Math.ceil((cooldownEnd - new Date()) / 3600000);
+        setCooldownMsg(`You failed this quiz recently. Come back in ${hoursLeft}h to try again.`);
+      } else {
+        localStorage.removeItem(quizCooldownKey);
+      }
+    }
+  }, [quizCooldownKey]);
 
   const handleComplete = () => {
     if (type === 'photo' && !proofUrl) {
@@ -934,15 +955,15 @@ function TaskCompletionModal({ task, userId, onComplete, onClose }) {
             )}
 
             {type === 'quiz' && task.quizType === 'roth_ira' && (
-              <StandardQuiz questions={ROTH_IRA_QUESTIONS} passingScore={task.passingScore} onComplete={handleQuizPass} onFail={handleQuizFail} />
+              <StandardQuiz questions={ROTH_IRA_QUESTIONS} passingScore={task.passingScore} onComplete={handleQuizPass} onFail={handleQuizFail} cooldownKey={quizCooldownKey} />
             )}
 
             {type === 'quiz' && task.quizType === 'tax_loss' && (
-              <StandardQuiz questions={TAX_LOSS_QUESTIONS} passingScore={task.passingScore} onComplete={handleQuizPass} onFail={handleQuizFail} />
+              <StandardQuiz questions={TAX_LOSS_QUESTIONS} passingScore={task.passingScore} onComplete={handleQuizPass} onFail={handleQuizFail} cooldownKey={quizCooldownKey} />
             )}
 
             {type === 'quiz' && task.quizType === 'index_funds' && (
-              <StandardQuiz questions={INDEX_FUND_QUESTIONS} passingScore={task.passingScore} onComplete={handleQuizPass} onFail={handleQuizFail} />
+              <StandardQuiz questions={INDEX_FUND_QUESTIONS} passingScore={task.passingScore} onComplete={handleQuizPass} onFail={handleQuizFail} cooldownKey={quizCooldownKey} />
             )}
 
             {type === 'photo' && (
@@ -958,8 +979,11 @@ function TaskCompletionModal({ task, userId, onComplete, onClose }) {
                   style={quizBtnStyle(!!proofUrl)}
                 >
                   <Upload style={{ width: 13, height: 13, display: 'inline', marginRight: 6 }} />
-                  Submit Proof & Complete
+                  Submit Proof for Review
                 </button>
+                <p style={{ fontSize: 10, color: T.textMuted, margin: 0, textAlign: 'center' }}>
+                  The owner will review and approve your submission.
+                </p>
               </div>
             )}
 
@@ -1225,6 +1249,230 @@ const AVATAR_PRESETS = {
 };
 
 // ── MAIN PAGE ──────────────────────────────────────────────────────────────
+
+// ── OWNER PROOF REVIEW TAB ─────────────────────────────────────────────────
+function OwnerProofReviewTab({ challenges, onAccept, onReject }) {
+  const [rejectModal, setRejectModal] = useState(null); // { challenge, taskIndex, userId, username }
+  const [rejectReason, setRejectReason] = useState('');
+
+  // Collect all pending proofs across all challenges
+  const pendingProofs = [];
+  (challenges || []).forEach(ch => {
+    (ch.rush_tasks || []).forEach((task, tIdx) => {
+      const pending = task.pending_review || {};
+      Object.entries(pending).forEach(([uid, info]) => {
+        pendingProofs.push({ challenge: ch, task, taskIndex: tIdx, userId: uid, info });
+      });
+    });
+  });
+
+  const handleRejectSubmit = () => {
+    if (!rejectReason.trim()) { return; }
+    const { challenge, taskIndex, userId } = rejectModal;
+    onReject(challenge, taskIndex, userId, rejectReason.trim());
+    setRejectModal(null);
+    setRejectReason('');
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Header banner */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '12px 16px', borderRadius: 12,
+        background: 'rgba(184,151,58,0.08)', border: `1px solid ${T.goldBorder}`,
+      }}>
+        <ShieldCheck style={{ width: 16, height: 16, color: T.gold, flexShrink: 0 }} />
+        <div>
+          <p style={{ fontSize: 12, fontWeight: 700, color: T.gold, margin: 0 }}>Owner Review Panel</p>
+          <p style={{ fontSize: 11, color: T.textMuted, margin: 0 }}>
+            {pendingProofs.length === 0
+              ? 'No pending proofs right now.'
+              : `${pendingProofs.length} proof${pendingProofs.length > 1 ? 's' : ''} waiting for review`}
+          </p>
+        </div>
+      </div>
+
+      {pendingProofs.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 0', color: T.textMuted }}>
+          <Eye style={{ width: 36, height: 36, margin: '0 auto 14px', opacity: 0.15 }} />
+          <p style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 4 }}>All clear</p>
+          <p style={{ fontSize: 11 }}>No photo proofs waiting for review.</p>
+        </div>
+      ) : (
+        pendingProofs.map(({ challenge, task, taskIndex, userId, info }, i) => (
+          <motion.div
+            key={`${challenge.id}-${taskIndex}-${userId}`}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            style={{
+              background: T.surfaceAlt,
+              border: `1px solid ${T.border}`,
+              borderRadius: 14,
+              overflow: 'hidden',
+            }}
+          >
+            {/* Card header */}
+            <div style={{ padding: '14px 16px', borderBottom: `1px solid ${T.border}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                <div>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: T.text, margin: '0 0 3px' }}>
+                    @{info.username}
+                  </p>
+                  <p style={{ fontSize: 10, color: T.textMuted, margin: 0 }}>
+                    {challenge.title} · Task {taskIndex + 1}
+                  </p>
+                </div>
+                <span style={{
+                  fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+                  padding: '3px 8px', borderRadius: 99,
+                  background: 'rgba(91,155,213,0.12)', color: T.info,
+                  border: '1px solid rgba(91,155,213,0.25)',
+                }}>Pending</span>
+              </div>
+              <p style={{ fontSize: 11, color: T.textMuted, margin: '8px 0 0', lineHeight: 1.5 }}>
+                {task.text}
+              </p>
+              {info.submittedAt && (
+                <p style={{ fontSize: 10, color: T.textDim, margin: '4px 0 0' }}>
+                  Submitted {new Date(info.submittedAt).toLocaleString()}
+                </p>
+              )}
+            </div>
+
+            {/* Proof image */}
+            <div style={{ padding: '14px 16px' }}>
+              {info.proofUrl ? (
+                <div style={{ borderRadius: 10, overflow: 'hidden', border: `1px solid ${T.border}`, marginBottom: 14 }}>
+                  <img
+                    src={info.proofUrl}
+                    alt="Submitted proof"
+                    style={{ width: '100%', maxHeight: 280, objectFit: 'cover', display: 'block' }}
+                  />
+                </div>
+              ) : (
+                <div style={{ padding: '20px', textAlign: 'center', color: T.textMuted, fontSize: 11, marginBottom: 14 }}>
+                  No image preview available.
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => onAccept(challenge, taskIndex, userId)}
+                  style={{
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    padding: '10px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    background: T.successDim, color: T.success,
+                    fontSize: 12, fontWeight: 700, transition: 'all 0.15s',
+                    border: '1px solid rgba(126,184,138,0.3)',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(126,184,138,0.22)'}
+                  onMouseLeave={e => e.currentTarget.style.background = T.successDim}
+                >
+                  <ThumbsUp style={{ width: 13, height: 13 }} /> Accept
+                </button>
+                <button
+                  onClick={() => { setRejectModal({ challenge, taskIndex, userId, username: info.username }); setRejectReason(''); }}
+                  style={{
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    padding: '10px', borderRadius: 10, border: '1px solid rgba(192,57,43,0.3)', cursor: 'pointer',
+                    background: T.dangerDim, color: T.danger,
+                    fontSize: 12, fontWeight: 700, transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(192,57,43,0.22)'}
+                  onMouseLeave={e => e.currentTarget.style.background = T.dangerDim}
+                >
+                  <ThumbsDown style={{ width: 13, height: 13 }} /> Reject
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        ))
+      )}
+
+      {/* Reject reason modal */}
+      <AnimatePresence>
+        {rejectModal && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 1100,
+            background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 20,
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.94 }}
+              style={{
+                background: T.surfaceAlt, border: `1px solid rgba(192,57,43,0.4)`,
+                borderRadius: 18, padding: 24, maxWidth: 440, width: '100%',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 600, fontSize: 18, color: T.text, margin: 0 }}>
+                  Reject Proof
+                </h3>
+                <button onClick={() => setRejectModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textMuted }}>
+                  <X style={{ width: 16, height: 16 }} />
+                </button>
+              </div>
+              <p style={{ fontSize: 12, color: T.textMuted, marginBottom: 14, lineHeight: 1.55 }}>
+                Rejecting <strong style={{ color: T.text }}>@{rejectModal.username}</strong>'s proof.
+                A message with your reason will be sent to their inbox.
+              </p>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.textMuted, display: 'block', marginBottom: 6 }}>
+                  Reason for rejection
+                </label>
+                <textarea
+                  value={rejectReason}
+                  onChange={e => setRejectReason(e.target.value)}
+                  placeholder="e.g. The photo doesn't clearly show the required proof. Please resubmit with a clearer image."
+                  rows={4}
+                  style={{
+                    width: '100%', padding: '10px 12px',
+                    background: T.surface, border: `1px solid ${T.border}`,
+                    borderRadius: 10, color: T.text, fontSize: 12, lineHeight: 1.55,
+                    resize: 'vertical', outline: 'none', boxSizing: 'border-box',
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = T.goldBorder}
+                  onBlur={e => e.currentTarget.style.borderColor = T.border}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => setRejectModal(null)}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: 10, border: `1px solid ${T.border}`,
+                    background: T.surfaceHigh, color: T.textMuted, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRejectSubmit}
+                  disabled={!rejectReason.trim()}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: 10, border: 'none', cursor: rejectReason.trim() ? 'pointer' : 'not-allowed',
+                    background: rejectReason.trim() ? T.danger : T.surfaceHigh,
+                    color: rejectReason.trim() ? '#fff' : T.textMuted,
+                    fontSize: 12, fontWeight: 700, transition: 'all 0.15s',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  }}
+                >
+                  <MessageSquare style={{ width: 13, height: 13 }} /> Send Rejection
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function Challenges() {
   const [user, setUser] = useState(null);
   const [myProfile, setMyProfile] = useState(null);
@@ -1234,6 +1482,7 @@ export default function Challenges() {
   const [form, setForm] = useState({ title: '', opponent_username: '', savings_goal: '' });
   const [searching, setSearching] = useState(false);
   const [showFriendPicker, setShowFriendPicker] = useState(false);
+  const [activeTab, setActiveTab] = useState('clashes'); // 'clashes' | 'review'
   const queryClient = useQueryClient();
   const location = useLocation();
 
@@ -1353,20 +1602,31 @@ export default function Challenges() {
   };
 
   // ── Proof-based task completion ──────────────────────────────────────────
+  const CARLOS_USERNAME = 'carlos';
+  const isCarlos = myProfile?.username?.toLowerCase() === CARLOS_USERNAME;
+
   const handleTaskComplete = async (challenge, task, taskIndex, proofUrl) => {
     const tasks = challenge.rush_tasks ? [...challenge.rush_tasks] : [];
     const t = { ...tasks[taskIndex] };
 
-    // Apply cooldown check (stored in task metadata)
-    const cooldownKey = `cooldown_${task.id}_${user.id}`;
-    const storedCooldown = localStorage.getItem(cooldownKey);
-    if (storedCooldown) {
-      const cooldownEnd = new Date(storedCooldown);
-      if (new Date() < cooldownEnd) {
-        const hoursLeft = Math.ceil((cooldownEnd - new Date()) / 3600000);
-        toast.error(`Cooldown active — try again in ${hoursLeft}h.`);
-        return;
-      }
+    // Photo tasks go into pending_review instead of immediate completion
+    if (task.completionType === 'photo' && proofUrl) {
+      t.proof_urls = { ...(t.proof_urls || {}), [user.id]: proofUrl };
+      // Store submitter info for owner review
+      t.pending_review = { ...(t.pending_review || {}), [user.id]: {
+        userId: user.id,
+        username: myProfile?.username || user.email,
+        challengeId: challenge.id,
+        challengeTitle: challenge.title,
+        taskIndex,
+        proofUrl,
+        submittedAt: new Date().toISOString(),
+      }};
+      tasks[taskIndex] = t;
+      await entities.Challenge.update(challenge.id, { rush_tasks: tasks });
+      queryClient.invalidateQueries({ queryKey: ['challenges'] });
+      toast.success('Proof submitted! Waiting for owner review.');
+      return;
     }
 
     t.completed_by = [...(t.completed_by || []), user.id];
@@ -1412,6 +1672,73 @@ export default function Challenges() {
     } else {
       toast.success(`Objective verified! ${myDoneCount}/${tasks.length} done`);
     }
+  };
+
+  // ── Owner: accept a photo proof ──────────────────────────────────────────
+  const handleOwnerAccept = async (challenge, taskIndex, submitterUserId) => {
+    const tasks = [...(challenge.rush_tasks || [])];
+    const t = { ...tasks[taskIndex] };
+    // Mark complete for this user
+    t.completed_by = [...new Set([...(t.completed_by || []), submitterUserId])];
+    // Remove from pending_review
+    const pending = { ...(t.pending_review || {}) };
+    delete pending[submitterUserId];
+    t.pending_review = pending;
+    tasks[taskIndex] = t;
+
+    const updateObj = { rush_tasks: tasks };
+    await entities.Challenge.update(challenge.id, updateObj);
+
+    // Notify the submitter
+    const submitterInfo = tasks[taskIndex].proof_urls ? challenge : null;
+    const submitterUsername = t.proof_urls ? Object.keys(t.proof_urls)[0] : null;
+    try {
+      // Find submitter profile to get their user id for notification
+      await notificationsApi.send({
+        recipient_id: submitterUserId,
+        sender_id: user.id,
+        sender_username: myProfile?.username || 'carlos',
+        type: 'clash_invite',
+        title: '✅ Proof Accepted',
+        body: `Your proof for "${t.text}" in "${challenge.title}" was approved! Task marked complete.`,
+        read: false,
+      });
+    } catch(e) { /* silent */ }
+
+    queryClient.invalidateQueries({ queryKey: ['challenges'] });
+    toast.success('Proof accepted — task marked complete for that user!');
+  };
+
+  // ── Owner: reject a photo proof ──────────────────────────────────────────
+  const handleOwnerReject = async (challenge, taskIndex, submitterUserId, reason) => {
+    const tasks = [...(challenge.rush_tasks || [])];
+    const t = { ...tasks[taskIndex] };
+    // Remove from pending_review and clear their proof
+    const pending = { ...(t.pending_review || {}) };
+    delete pending[submitterUserId];
+    t.pending_review = pending;
+    const proofUrls = { ...(t.proof_urls || {}) };
+    delete proofUrls[submitterUserId];
+    t.proof_urls = proofUrls;
+    tasks[taskIndex] = t;
+
+    await entities.Challenge.update(challenge.id, { rush_tasks: tasks });
+
+    // Send rejection reason to submitter's inbox
+    try {
+      await notificationsApi.send({
+        recipient_id: submitterUserId,
+        sender_id: user.id,
+        sender_username: myProfile?.username || 'carlos',
+        type: 'clash_invite',
+        title: '❌ Proof Rejected',
+        body: `Your proof for "${t.text}" in "${challenge.title}" was rejected. Reason: ${reason}`,
+        read: false,
+      });
+    } catch(e) { /* silent */ }
+
+    queryClient.invalidateQueries({ queryKey: ['challenges'] });
+    toast.success('Proof rejected — user notified via inbox.');
   };
 
   const getStatusBadge = (status) => {
@@ -1866,6 +2193,62 @@ export default function Challenges() {
         {/* ── HOW IT WORKS ── */}
         <HowItWorks open={howOpen} onClose={() => setHowOpen(false)} />
 
+        {/* ── OWNER TAB SWITCHER (carlos only) ── */}
+        {isCarlos && (() => {
+          // Count pending proofs for badge
+          let pendingCount = 0;
+          challenges.forEach(ch => {
+            (ch.rush_tasks || []).forEach(task => {
+              pendingCount += Object.keys(task.pending_review || {}).length;
+            });
+          });
+          return (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: `1px solid ${T.border}`, paddingBottom: 0 }}>
+              {[
+                { key: 'clashes', label: 'My Clashes', Icon: Swords },
+                { key: 'review',  label: 'Proof Review', Icon: ShieldCheck, badge: pendingCount },
+              ].map(({ key, label, Icon, badge }) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '10px 16px', background: 'none', border: 'none', cursor: 'pointer',
+                    borderBottom: `2px solid ${activeTab === key ? T.gold : 'transparent'}`,
+                    color: activeTab === key ? T.gold : T.textMuted,
+                    fontSize: 12, fontWeight: activeTab === key ? 700 : 500,
+                    transition: 'all 0.15s', marginBottom: -1,
+                    position: 'relative',
+                  }}
+                >
+                  <Icon style={{ width: 13, height: 13 }} />
+                  {label}
+                  {badge > 0 && (
+                    <span style={{
+                      position: 'absolute', top: 6, right: 6,
+                      width: 16, height: 16, borderRadius: '50%',
+                      background: T.danger, color: '#fff',
+                      fontSize: 9, fontWeight: 800,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>{badge}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          );
+        })()}
+
+        {/* ── OWNER REVIEW PANEL ── */}
+        {isCarlos && activeTab === 'review' && (
+          <OwnerProofReviewTab
+            challenges={challenges}
+            onAccept={handleOwnerAccept}
+            onReject={handleOwnerReject}
+          />
+        )}
+
+        {isCarlos && activeTab === 'review' ? null : (<>
+
         {/* ── STATS ROW ── */}
         {myChallenges.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
@@ -1930,6 +2313,7 @@ export default function Challenges() {
             </div>
           )}
         </div>
+        </>)}
       </div>
     </div>
   );

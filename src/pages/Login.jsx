@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { supabase, entities } from '@/api/supabaseClient';
+import { supabase } from '@/api/supabaseClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Swords, Mail, Loader2, AtSign, Globe } from 'lucide-react';
+import { Mail, Loader2, AtSign, Globe, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -48,7 +48,6 @@ export default function Login() {
     setLoading(true);
     try {
       if (isSignUp) {
-        // Check username uniqueness
         const { data: existing } = await supabase
           .from('user_profiles').select('id').eq('username', username.toLowerCase()).maybeSingle();
         if (existing) { toast.error('Username already taken. Choose another.'); setLoading(false); return; }
@@ -57,7 +56,6 @@ export default function Login() {
         if (error) throw error;
 
         if (authData.user) {
-          // Create profile immediately
           await supabase.from('user_profiles').insert([{
             created_by: authData.user.id,
             email: email,
@@ -86,77 +84,140 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center">
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
-            <Swords className="w-7 h-7 text-primary" />
+    <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] p-4 relative overflow-hidden font-serif">
+      {/* Background Decorative Elements */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#D4A017] rounded-full blur-[120px] opacity-[0.08]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-[#C17F24] rounded-full blur-[100px] opacity-[0.06]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(212,160,23,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(212,160,23,0.03)_1px,transparent_1px)] bg-[size:50px_50px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_20%,transparent_100%)]" />
+      </div>
+
+      <div className="w-full max-w-sm space-y-8 relative z-10">
+        <div className="text-center space-y-4">
+          <div className="relative inline-block group">
+            <div className="absolute inset-0 bg-[#D4A017] blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
+            <img 
+              src="logocash.png" 
+              alt="Cash Clash Logo" 
+              className="w-20 h-20 relative z-10 drop-shadow-[0_0_15px_rgba(212,160,23,0.5)]" 
+            />
           </div>
-          <h1 className="text-2xl font-heading font-bold">Cash Clash</h1>
-          <p className="text-sm text-muted-foreground mt-1">Compete. Save. Win.</p>
+          <div>
+            <h1 className="text-4xl font-bold tracking-[0.1em] text-[#E8E0D0] uppercase font-['Cinzel_Decorative']">
+              Cash <span className="text-[#D4A017] drop-shadow-[0_0_10px_rgba(212,160,23,0.4)]">Clash</span>
+            </h1>
+            <p className="text-xs uppercase tracking-[0.3em] text-[#8A7D6A] mt-2 font-mono">Compete • Save • Win</p>
+          </div>
         </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">{isSignUp ? 'Create Account' : 'Sign In'}</CardTitle>
-            <CardDescription>
-              {isSignUp ? 'Choose your username and start clashing' : 'Welcome back, player'}
+        <Card className="bg-[#111111] border-[#D4A017]/20 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          <CardHeader className="pb-4 space-y-1">
+            <CardTitle className="text-xl text-[#E8E0D0] font-['Cinzel_Decorative']">
+              {isSignUp ? 'Enroll for Battle' : 'Enter the Arena'}
+            </CardTitle>
+            <CardDescription className="text-[#8A7D6A] italic">
+              {isSignUp ? 'Establish your credentials, recruit.' : 'Welcome back, commander.'}
             </CardDescription>
           </CardHeader>
+          
           <CardContent className="space-y-4">
             {isSignUp && (
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="username" className="text-[#E8E0D0]/80 text-xs uppercase tracking-widest">Username</Label>
                 <div className="relative">
-                  <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#D4A017]/60" />
                   <Input
                     id="username"
-                    placeholder="your_username"
+                    placeholder="your_handle"
                     value={username}
                     onChange={e => setUsername(e.target.value.replace(/\s/g, ''))}
-                    className="pl-9"
+                    className="pl-9 bg-[#1A1A1A] border-[#D4A017]/10 text-[#E8E0D0] focus-visible:ring-[#D4A017]/30 placeholder:text-[#8A7D6A]/40"
                     maxLength={20}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">3–20 chars, letters/numbers/underscores. Used to send clash invites.</p>
               </div>
             )}
+
             {isSignUp && (
               <div className="space-y-2">
-                <Label htmlFor="region" className="flex items-center gap-1.5"><Globe className="w-3.5 h-3.5" /> Region</Label>
+                <Label htmlFor="region" className="flex items-center gap-1.5 text-[#E8E0D0]/80 text-xs uppercase tracking-widest">
+                  <Globe className="w-3.5 h-3.5 text-[#D4A017]" /> Region
+                </Label>
                 <select
                   id="region"
                   value={region}
                   onChange={e => setRegion(e.target.value)}
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  className="w-full h-10 rounded-md border border-[#D4A017]/10 bg-[#1A1A1A] px-3 text-sm text-[#E8E0D0] focus:outline-none focus:ring-1 focus:ring-[#D4A017]/30"
                 >
-                  {REGIONS.map(r => <option key={r.value} value={r.value}>{r.label} — {r.currency}</option>)}
+                  {REGIONS.map(r => <option key={r.value} value={r.value} className="bg-[#111111]">{r.label} — {r.currency}</option>)}
                 </select>
-                <p className="text-xs text-muted-foreground">Sets your default currency for budgets and challenges.</p>
               </div>
             )}
+
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="you@example.com" value={email}
-                onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+              <Label htmlFor="email" className="text-[#E8E0D0]/80 text-xs uppercase tracking-widest">Email Address</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#D4A017]/60" />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="you@domain.com" 
+                  value={email}
+                  onChange={e => setEmail(e.target.value)} 
+                  onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                  className="pl-9 bg-[#1A1A1A] border-[#D4A017]/10 text-[#E8E0D0] focus-visible:ring-[#D4A017]/30 placeholder:text-[#8A7D6A]/40"
+                />
+              </div>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" placeholder="••••••••" value={password}
-                onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+              <Label htmlFor="password" className="text-[#E8E0D0]/80 text-xs uppercase tracking-widest">Passkey</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#D4A017]/60" />
+                <Input 
+                  id="password" 
+                  type="password" 
+                  placeholder="••••••••" 
+                  value={password}
+                  onChange={e => setPassword(e.target.value)} 
+                  onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                  className="pl-9 bg-[#1A1A1A] border-[#D4A017]/10 text-[#E8E0D0] focus-visible:ring-[#D4A017]/30 placeholder:text-[#8A7D6A]/40"
+                />
+              </div>
             </div>
-            <Button onClick={handleSubmit} className="w-full gap-2" disabled={loading}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-              {isSignUp ? 'Create Account' : 'Sign In'}
+
+            <Button 
+              onClick={handleSubmit} 
+              className="w-full h-11 bg-gradient-to-r from-[#C17F24] via-[#D4A017] to-[#C17F24] hover:scale-[1.02] transition-transform text-[#0A0A0A] font-bold tracking-[0.15em] font-['Cinzel_Decorative'] shadow-[0_0_20px_rgba(212,160,23,0.3)] border-none"
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (isSignUp ? 'ENLIST' : 'DEPLOY')}
             </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-              <button onClick={() => setIsSignUp(!isSignUp)} className="text-primary hover:underline font-medium">
-                {isSignUp ? 'Sign in' : 'Sign up'}
+
+            <div className="relative py-2">
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-[#D4A017]/10" /></div>
+              <div className="relative flex justify-center text-[10px] uppercase tracking-widest text-[#8A7D6A]">
+                <span className="bg-[#111111] px-2">Decision</span>
+              </div>
+            </div>
+
+            <p className="text-center text-sm text-[#8A7D6A]">
+              {isSignUp ? 'Already a veteran?' : "New to the battle?"}{' '}
+              <button 
+                onClick={() => setIsSignUp(!isSignUp)} 
+                className="text-[#D4A017] hover:text-[#F2C94C] transition-colors font-semibold underline underline-offset-4 decoration-[#D4A017]/30"
+              >
+                {isSignUp ? 'Sign in' : 'Create Account'}
               </button>
             </p>
           </CardContent>
         </Card>
+
+        <footer className="text-center">
+          <p className="text-[10px] uppercase tracking-[0.4em] text-[#8A7D6A]/40 font-mono">
+            © 2026 CASH CLASH • FOR THE BOLD
+          </p>
+        </footer>
       </div>
     </div>
   );
