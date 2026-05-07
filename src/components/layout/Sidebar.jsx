@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { notificationsApi } from '@/api/supabaseClient';
 import { useTutorial } from '@/lib/TutorialContext';
+import { BarChart2 } from 'lucide-react';
 
 const PRIMARY_NAV = [
   { path: '/Dashboard', icon: LayoutDashboard, label: 'Dashboard', description: 'Your hub',      tutorialId: 'nav-dashboard' },
@@ -20,8 +21,8 @@ const COMMUNITY_NAV = [
 ];
 
 const EXPLORE_NAV = [
-  { path: '/Goals',       icon: Target,        label: 'Goals',   tutorialId: null },
-  { path: '/StockMarket', icon: TrendingUp,    label: 'Markets', tutorialId: null },
+  { path: '/GoalGuide', icon: Target, label: 'Goal Guide', tutorialId: null },
+  { path: '/StockSense', icon: BarChart2, label: 'Stock Market', tutorialId: null },
   { path: '/Learn',       icon: GraduationCap, label: 'Learn',   tutorialId: null },
 ];
 

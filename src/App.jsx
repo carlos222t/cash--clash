@@ -6,6 +6,8 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { TutorialProvider } from '@/lib/TutorialContext';
+import GoalGuide from './pages/GoalGuide'; 
+import StockSense from './pages/StockSense';
 
 import AppLayout from './components/layout/AppLayout';
 import TutorialOverlay from './components/layout/TutorialOverlay';
@@ -56,6 +58,8 @@ const AuthenticatedApp = () => {
           <Route path="/Clans" element={<Clans />} />
           <Route path="/StockMarket" element={<StockMarket />} />
           <Route path="/Learn" element={<Learn />} />
+          <Route path="/GoalGuide" element={<GoalGuide />} />
+          <Route path="/StockSense" element={<StockSense />} />
         </Route>
         <Route path="*" element={<PageNotFound />} />
       </Routes>

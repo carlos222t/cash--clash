@@ -167,14 +167,24 @@ function InviteMembersDialog({ open, onClose, clanId, userId, queryClient }) {
 
   const invite = async (profile) => {
     try {
-      const { error } = await supabase.from('clan_members').insert({ clan_id: clanId, user_id: profile.created_by, role: 'member' });
-      if (error) {
-        if (error.code === '23505') toast.error('This person is already in a clan');
-        else { console.error('Invite error:', error); toast.error(error.message); }
-      } else {
+      // Check if already invited
+      const { data: existing } = await supabase.from('notifications')
+        .select('id').eq('recipient_id', profile.created_by).eq('type', 'clan_invite').eq('related_id', clanId).maybeSingle();
+      if (existing) { toast.error('Already invited'); return; }
+
+      const { error } = await supabase.from('notifications').insert({
+        recipient_id: profile.created_by,
+        sender_id: userId,
+        type: 'clan_invite',
+        title: `You've been invited to join a clan!`,
+        body: `You received a clan invitation. Open your inbox to accept or decline.`,
+        related_id: clanId,
+        read: false,
+      });
+      if (error) { console.error('Invite error:', error); toast.error(error.message); }
+      else {
         setInvited(prev => new Set([...prev, profile.created_by]));
-        queryClient.invalidateQueries(['clan-members', clanId]);
-        toast.success(`${profile.display_name} added!`);
+        toast.success(`Invite sent to ${profile.display_name}!`);
       }
     } catch (e) { console.error(e); toast.error(e.message); }
   };
@@ -319,6 +329,22 @@ export default function Clans() {
     enabled: !!myClan?.id,
   });
 
+  const { data: pendingInvite } = useQuery({
+    queryKey: ['clan-invite', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('notifications')
+        .select('*, clan:clans!notifications_related_id_fkey(*)')
+        .eq('recipient_id', user.id).eq('type', 'clan_invite').eq('read', false)
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      // Fallback: fetch clan separately if join didn't work
+      if (data && !data.clan && data.related_id) {
+        const { data: clan } = await supabase.from('clans').select('*').eq('id', data.related_id).maybeSingle();
+        return { ...data, clan };
+      }
+      return data;
+    },
+    enabled: !!user?.id && !myClan,
+  });
   const { data: pendingCount = 0 } = useQuery({
     queryKey: ['clan-requests-count', myClan?.id],
     queryFn: async () => {
@@ -351,6 +377,25 @@ export default function Clans() {
         toast.success('Join request sent!');
       }
     } catch (e) { toast.error(e.message); }
+  };
+
+  const handleAcceptInvite = async () => {
+    if (!pendingInvite) return;
+    try {
+      const { error } = await supabase.from('clan_members').insert({ clan_id: pendingInvite.related_id, user_id: user.id, role: 'member' });
+      if (error) { toast.error(error.code === '23505' ? 'Already in a clan' : error.message); return; }
+      await supabase.from('notifications').update({ read: true }).eq('id', pendingInvite.id);
+      toast.success(`Joined ${pendingInvite.clan?.name || 'the clan'}!`);
+      queryClient.invalidateQueries(['my-clan-membership', user?.id]);
+      queryClient.invalidateQueries(['clan-invite', user?.id]);
+    } catch (e) { toast.error(e.message); }
+  };
+
+  const handleDeclineInvite = async () => {
+    if (!pendingInvite) return;
+    await supabase.from('notifications').update({ read: true }).eq('id', pendingInvite.id);
+    toast.success('Invite declined');
+    queryClient.invalidateQueries(['clan-invite', user?.id]);
   };
 
   const handleLeaveClan = async () => {
@@ -386,6 +431,24 @@ export default function Clans() {
           {tab === 'my' && (
             <motion.div key="my" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               {!myClan ? (
+                <>
+                  {pendingInvite && (
+                    <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                      style={{ background: T.goldDim, border: `1px solid ${T.goldBorder}`, borderRadius: 16, padding: 20, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <div style={{ width: 48, height: 48, borderRadius: 12, background: T.goldDim, border: `1px solid ${T.goldBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
+                        {pendingInvite.clan?.avatar_emoji || '🛡️'}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ margin: 0, fontSize: 13, color: T.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pending Invitation</p>
+                        <p style={{ margin: '2px 0 0', fontSize: 16, fontWeight: 700, color: T.text }}>{pendingInvite.clan?.name || 'A clan'}</p>
+                        {pendingInvite.clan?.bio && <p style={{ margin: '2px 0 0', fontSize: 12, color: T.textMuted }}>{pendingInvite.clan.bio}</p>}
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={handleAcceptInvite} style={{ background: T.gold, border: 'none', borderRadius: 10, padding: '8px 16px', color: T.surface, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Accept</button>
+                        <button onClick={handleDeclineInvite} style={{ background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 10, padding: '8px 16px', color: T.textMuted, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Decline</button>
+                      </div>
+                    </motion.div>
+                  )}
                 <Card style={{ textAlign: 'center', padding: '60px 20px', borderStyle: 'dashed' }}>
                   <Shield size={48} style={{ color: T.textDim, marginBottom: 16 }} />
                   <p style={{ color: T.textMuted }}>You are not currently a member of any clan.</p>
@@ -394,6 +457,7 @@ export default function Clans() {
                     <GoldButton variant="outline" onClick={() => setTab('browse')}>Find a Clan</GoldButton>
                   </div>
                 </Card>
+                </>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 24 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>

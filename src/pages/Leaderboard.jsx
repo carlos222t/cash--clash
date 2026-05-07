@@ -109,11 +109,7 @@ function LeaderboardRow({ profile, rank, onView, isMe, isTopPlayer }) {
               fontSize: 16, zIndex: 20, pointerEvents: 'none',
             }}>👑</div>
           )}
-          {godly ? (
-            <GodlyWrapper active style={{ borderRadius: '50%' }}>
-              {avatarEl}
-            </GodlyWrapper>
-          ) : avatarEl}
+          {avatarEl}
         </div>
 
         {/* Name / username */}
