@@ -22,7 +22,7 @@ const COMPANY_NAMES = {
 
 // ─── Yahoo Finance via Vite proxy (fixes CORS) ────────────────────────────────
 
-aasync function fetchYahoo(symbol, range = "1mo", interval = "1d") {
+async function fetchYahoo(symbol, range = "1mo", interval = "1d") {
   const isProd = import.meta.env.PROD;
   const url = isProd
     ? `https://yahoo-finance15.p.rapidapi.com/api/v1/markets/stock/history?symbol=${encodeURIComponent(symbol)}&interval=${interval}&diffandsplits=false`
