@@ -1,0 +1,312 @@
+--- a/CryptoPackOpener.jsx
++++ b/CryptoPackOpener.jsx
+@@ -1,5 +1,5 @@
+ // ============================================================
+-//  CryptoPackOpener.jsx — Drop-in component for Cash Clash
++//  CryptoPackOpener.jsx — Drop-in component for Cash Clash  (Tap Escalation v2)
+ //  Props: coins (number), packCost (number), onSpend (fn), onResult (fn)
+ // ============================================================
+
+@@ After `} // end MythicRevealSequence` and before `// ─── Sub-components ─────` insert:
+
++// ─── Tap Escalation helpers ──────────────────────────────────
++// Epic:      1 tap  → purple aura + particles → flip reveal
++// Legendary: 2 taps → stage-0 purple → stage-1 golden + bolts → flip reveal
++// Mythic:    3 taps → stage-0 purple → stage-1 golden → stage-2 orange → MythicRevealSequence
++
++const TAP_STAGES = { common: 0, rare: 0, epic: 1, legendary: 2, mythic: 3 };
++
++function getStageStyle(stage) {
++  if (stage === 0) return {
++    border:      "2px solid #C77DFF",
++    boxShadow:   "0 0 60px rgba(199,125,255,0.75), inset 0 0 40px rgba(199,125,255,0.4)",
++    pulseColor:  "#C77DFF",
++    labelText:   "✧ TAP TO CHARGE ✧",
++    labelColor:  "#C77DFF",
++    showBolts:   false,
++    particleColors: ["#C77DFF","#9D4EDD","#FFFFFF"],
++  };
++  if (stage === 1) return {
++    border:      "2px solid #FFD96B",
++    boxShadow:   "0 0 80px rgba(255,217,107,0.85), inset 0 0 50px rgba(255,217,107,0.5)",
++    pulseColor:  "#FFD96B",
++    labelText:   "⚡ TAP AGAIN TO AWAKEN ⚡",
++    labelColor:  "#FFD96B",
++    showBolts:   true,
++    particleColors: ["#FFD96B","#B8973A","#FFF1B8"],
++  };
++  // stage 2 — mythic charge
++  return {
++    border:      "2px solid #FF6A2C",
++    boxShadow:   "0 0 100px rgba(255,106,44,0.9), inset 0 0 60px rgba(255,106,44,0.6)",
++    pulseColor:  "#FF6A2C",
++    labelText:   "◈ FINAL TAP ◈",
++    labelColor:  "#FF6A2C",
++    showBolts:   true,
++    particleColors: ["#FF6A2C","#FFD96B","#ffffff"],
++  };
++}
+
+@@ Replace the entire `function RevealOverlay({ card, onClose }) { … }` block with:
+
++function RevealOverlay({ card, onClose }) {
++  const tier = card.rarity;
++  const meta = RARITY_META[tier];
++  const totalTaps = TAP_STAGES[tier];      // 0 = simple instant-reveal, 1/2/3 = escalation
++  const isSimple  = totalTaps === 0;
++
++  const [tapStage,          setTapStage]          = useState(0);
++  const [flipped,           setFlipped]           = useState(false);
++  const [showMythicSeq,     setShowMythicSeq]     = useState(false);
++  const [shakeScreen,       setShakeScreen]       = useState(false);
++  const [particleKey,       setParticleKey]       = useState(0); // forces remount on tap
++  const [boltKey,           setBoltKey]           = useState(0);
++
++  // current visual style is driven by how many taps have already landed
++  // (tapStage is incremented *after* the tap, so before first tap it shows stage-0 styling)
++  const stageStyle = getStageStyle(tapStage);
++
++  // ── particles (re-keyed on every tap so animation replays) ──
++  const particles = useMemo(() => Array.from({ length: 26 }, (_, i) => {
++    const angle = (i / 26) * Math.PI * 2 + Math.random() * 0.4;
++    const dist  = 120 + Math.random() * 200;
++    return {
++      x:     Math.cos(angle) * dist,
++      y:     Math.sin(angle) * dist,
++      delay: Math.random() * 0.35,
++      color: stageStyle.particleColors[i % 3],
++    };
++  }), [particleKey]); // eslint-disable-line react-hooks/exhaustive-deps
++
++  const bolts = useMemo(() => Array.from({ length: 6 }, (_, i) => ({
++    rot:   (i / 6) * 360 + Math.random() * 20,
++    delay: 0.04 + i * 0.07,
++  })), [boltKey]); // eslint-disable-line react-hooks/exhaustive-deps
++
++  // ── tap handler ──────────────────────────────────────────────
++  const handleTap = () => {
++    if (flipped) return;
++    setShakeScreen(true);
++    setTimeout(() => setShakeScreen(false), 420);
++    setParticleKey(k => k + 1);
++    if (stageStyle.showBolts) setBoltKey(k => k + 1);
++
++    const nextTap = tapStage + 1;
++
++    if (nextTap >= totalTaps) {
++      // ── Final tap ──
++      if (tier === "mythic") {
++        setShowMythicSeq(true);
++      } else {
++        setTapStage(nextTap);
++        setTimeout(() => setFlipped(true), 280);
++      }
++    } else {
++      setTapStage(nextTap);
++    }
++  };
++
++  // ── mythic sequence hand-off ─────────────────────────────────
++  if (showMythicSeq) {
++    return <MythicRevealSequence card={card} onClose={onClose} />;
++  }
++
++  // ── derived visuals ──────────────────────────────────────────
++  const bgColor =
++    isSimple        ? "rgba(5,5,5,0.92)" :
++    tapStage === 0  ? "radial-gradient(ellipse at center, rgba(40,10,70,0.78), rgba(5,5,5,0.97))" :
++    tapStage === 1  ? "radial-gradient(ellipse at center, rgba(60,50,10,0.82), rgba(5,5,5,0.97))" :
++                      "radial-gradient(ellipse at center, rgba(65,20,5,0.88), rgba(5,5,5,0.97))";
++
++  const spinColor =
++    tapStage === 0 ? "#C77DFF" :
++    tapStage === 1 ? "#FFD96B" :
++                     "#FF6A2C";
++
++  const cardBorder = flipped ? `2px solid ${meta.color}` : stageStyle.border;
++  const cardShadow = flipped ? `0 0 60px ${meta.glow}, inset 0 0 40px ${meta.glow}` : stageStyle.boxShadow;
++
++  const finalLabel =
++    tier === "legendary" ? "⚡ LEGENDARY PULL ⚡" :
++    tier === "epic"      ? "✧ EPIC FIND ✧"       :
++                           meta.label;
++
++  return (
++    <div
++      className={`cpo-vignette-in${shakeScreen ? " cpo-screen-shake" : ""}`}
++      style={{
++        position: "fixed", inset: 0, zIndex: 9999,
++        display: "flex", alignItems: "center", justifyContent: "center",
++        padding: 16, background: bgColor,
++      }}
++    >
++      {/* ── Spinning conic aura (visible only during tap stages) ── */}
++      {!isSimple && !flipped && (
++        <div
++          className="cpo-spin-slow"
++          style={{
++            position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.18,
++            background: `conic-gradient(from 0deg at 50% 50%,
++              transparent 0deg, ${spinColor} 4deg, transparent 8deg,
++              transparent 60deg, ${spinColor} 64deg, transparent 68deg,
++              transparent 120deg, ${spinColor} 124deg, transparent 128deg)`,
++            transition: "background 0.5s",
++          }}
++        />
++      )}
++
++      {/* ── Firework particles — re-keyed each tap ── */}
++      {!isSimple && !flipped && (
++        <div
++          key={`p-${particleKey}`}
++          style={{ position: "absolute", left: "50%", top: "50%", pointerEvents: "none" }}
++        >
++          {particles.map((f, i) => (
++            <div key={i} style={{
++              position: "absolute", width: 7, height: 7, borderRadius: "50%",
++              background: f.color, boxShadow: `0 0 10px ${f.color}, 0 0 22px ${f.color}`,
++              "--fx": f.x, "--fy": f.y,
++              animation: `cpo-firework 1.0s cubic-bezier(0.1,0.7,0.3,1) ${f.delay}s both`,
++            }} />
++          ))}
++        </div>
++      )}
++
++      {/* ── Lightning bolts — appear at stage ≥ 1 ── */}
++      {!isSimple && !flipped && stageStyle.showBolts && (
++        <div
++          key={`b-${boltKey}`}
++          style={{ position: "absolute", left: "50%", top: "50%", pointerEvents: "none" }}
++        >
++          {bolts.map((b, i) => (
++            <div key={i} style={{
++              position: "absolute", width: 5, height: "58vh",
++              background: tapStage >= 2
++                ? "linear-gradient(to bottom, transparent, #FF9966, #FF6A2C, #cc3300, transparent)"
++                : "linear-gradient(to bottom, transparent, #FFF1B8, #FFD96B, #B8973A, transparent)",
++              filter: "blur(1px) drop-shadow(0 0 10px gold)",
++              "--bolt-rot": `${b.rot}deg`, transformOrigin: "center",
++              animation: `cpo-bolt 0.5s ease-out ${b.delay}s both`,
++            }} />
++          ))}
++        </div>
++      )}
++
++      {/* ── Card + label area ── */}
++      <div style={{ position: "relative", zIndex: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
++
++        {/* Label */}
++        <div
++          key={`lbl-${tapStage}-${flipped}`}
++          className="cpo-float-up"
++          style={{
++            textTransform: "uppercase", letterSpacing: "0.4em", fontSize: 12, fontWeight: 700,
++            color:      flipped || isSimple ? meta.color       : stageStyle.labelColor,
++            textShadow: flipped || isSimple ? `0 0 20px ${meta.glow}` : `0 0 20px ${stageStyle.labelColor}`,
++            animationDelay: "0.15s",
++          }}
++        >
++          {flipped || isSimple ? finalLabel : stageStyle.labelText}
++        </div>
++
++        {/* 3-D flip card */}
++        <div style={{ perspective: 1200 }}>
++          <div style={{
++            position: "relative", width: 288, height: 384,
++            transformStyle: "preserve-3d",
++            transition: "transform 0.7s cubic-bezier(0.2,0.9,0.3,1.1)",
++            transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
++          }}>
++
++            {/* ── Back face ── */}
++            <div
++              onClick={!flipped && !isSimple ? handleTap : undefined}
++              style={{
++                position: "absolute", inset: 0, borderRadius: 12,
++                background: "linear-gradient(135deg, #1a1a22, #0c0c10)",
++                border: cardBorder,
++                backfaceVisibility: "hidden",
++                display: "flex", alignItems: "center", justifyContent: "center",
++                boxShadow: cardShadow,
++                cursor: !flipped && !isSimple ? "pointer" : "default",
++                transition: "border 0.45s, box-shadow 0.45s",
++              }}
++            >
++              {/* Foil shimmer */}
++              <div style={{
++                position: "absolute", inset: 0, pointerEvents: "none", zIndex: 3, opacity: 0.15,
++                background: "linear-gradient(135deg, transparent 30%, rgba(255,255,255,0.35) 50%, transparent 70%)",
++              }} />
++              {/* $ symbol */}
++              <div style={{ textAlign: "center", position: "relative", zIndex: 4 }}>
++                <div style={{
++                  fontSize: 72, fontFamily: "Georgia, serif",
++                  background: "linear-gradient(135deg, #c9a84c, #7a5e22)",
++                  WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
++                }}>$</div>
++                <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.4em", color: "#b8973a" }}>
++                  Crypto Holdings
++                </div>
++              </div>
++              {/* Inner border ring */}
++              <div style={{
++                position: "absolute", inset: 12, borderRadius: 8, pointerEvents: "none",
++                border: `1px solid ${isSimple ? meta.color : stageStyle.pulseColor}60`,
++                transition: "border-color 0.45s",
++              }} />
++              {/* Tap progress dots (only for multi-tap tiers) */}
++              {!isSimple && !flipped && totalTaps > 1 && (
++                <div style={{
++                  position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)",
++                  display: "flex", gap: 8,
++                }}>
++                  {Array.from({ length: totalTaps }).map((_, i) => (
++                    <div key={i} style={{
++                      width: 8, height: 8, borderRadius: "50%",
++                      background: i < tapStage ? stageStyle.pulseColor : "rgba(255,255,255,0.12)",
++                      boxShadow:  i < tapStage ? `0 0 8px ${stageStyle.pulseColor}` : "none",
++                      transition: "background 0.3s, box-shadow 0.3s",
++                    }} />
++                  ))}
++                </div>
++              )}
++            </div>
++
++            {/* ── Front face ── */}
++            <div style={{ position: "absolute", inset: 0, backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
++              <CryptoCard crypto={card} size="xl" revealed={flipped} imageOnly />
++            </div>
++          </div>
++        </div>
++
++        {/* ── Simple tiers: Reveal button ── */}
++        {isSimple && !flipped && (
++          <button
++            className="cpo-float-up"
++            onClick={() => setFlipped(true)}
++            style={{
++              background: "linear-gradient(135deg, #c9a84c, #7a5e22)", color: "#0c0c10",
++              fontWeight: 700, fontSize: 16, padding: "12px 32px", borderRadius: 8, border: "none",
++              cursor: "pointer", letterSpacing: "0.05em",
++            }}
++          >Reveal Card</button>
++        )}
++
++        {/* ── Continue after flip ── */}
++        {flipped && (
++          <button
++            className="cpo-float-up"
++            onClick={onClose}
++            style={{
++              background: "transparent", border: "1px solid #b8973a", color: "#b8973a",
++              fontWeight: 700, fontSize: 16, padding: "12px 32px", borderRadius: 8,
++              cursor: "pointer", letterSpacing: "0.05em", animationDelay: "0.6s",
++            }}
++            onMouseEnter={e => e.currentTarget.style.background = "rgba(184,151,58,0.1)"}
++            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
++          >Continue Trading</button>
++        )}
++      </div>
++    </div>
++  );
++}

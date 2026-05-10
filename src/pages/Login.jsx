@@ -72,8 +72,27 @@ export default function Login() {
         toast.success('Account created! You can now sign in.');
         setIsSignUp(false);
       } else {
+        // Check if this email was banned before even trying
+        const { data: preBan } = await supabase.from('banned_users').select('reason').eq('email', email.toLowerCase()).maybeSingle();
+        if (preBan) {
+          toast.error(`This account was removed. Reason: ${preBan.reason}. Please create a new account.`);
+          setLoading(false);
+          setIsSignUp(true);
+          return;
+        }
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        // Double-check by user_id after login (catches edge cases)
+        const { data: { user: me } } = await supabase.auth.getUser();
+        if (me) {
+          const { data: ban } = await supabase.from('banned_users').select('reason').eq('user_id', me.id).maybeSingle();
+          if (ban) {
+            await supabase.auth.signOut();
+            toast.error(`This account was removed. Reason: ${ban.reason}. Please create a new account.`);
+            setIsSignUp(true);
+            return;
+          }
+        }
         navigate('/Dashboard');
       }
     } catch (err) {
@@ -135,6 +154,9 @@ export default function Login() {
                     maxLength={20}
                   />
                 </div>
+                <p style={{ fontSize: 11, color: 'rgba(212,160,23,0.6)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  ⚠️ Usernames must be appropriate. Offensive or inappropriate usernames may result in account removal.
+                </p>
               </div>
             )}
 

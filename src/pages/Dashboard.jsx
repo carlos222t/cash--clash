@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { auth, entities } from '@/api/supabaseClient';
-import { useQuery } from '@tanstack/react-query';
+import { auth, entities, supabase } from '@/api/supabaseClient';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Swords, Trophy, FileText, Zap, ArrowRight, Star, Users } from 'lucide-react';
+import { Plus, Swords, Trophy, FileText, Zap, ArrowRight, Star, Users, Shield, AlertTriangle } from 'lucide-react';
 
 import LevelBadge from '../components/game/LevelBadge';
 import XPBar from '../components/game/XPBar';
@@ -63,6 +63,47 @@ const goldAccentCard = {
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [pfpZoom, setPfpZoom] = useState(false);
+  const [showMonitor, setShowMonitor] = useState(false);
+  const [allPlayers, setAllPlayers] = useState([]);
+  const [banTarget, setBanTarget] = useState(null);
+  const [banReason, setBanReason] = useState('');
+  const [banStep, setBanStep] = useState('reason'); // 'reason' | 'password'
+  const [banPassword, setBanPassword] = useState('');
+  const [banError, setBanError] = useState('');
+  const [banLoading, setBanLoading] = useState(false);
+  const queryClient = useQueryClient();
+
+  const isCarlos = user?.email?.toLowerCase() === 'carlos.thomas@ciac.edu.mx';
+
+  const loadPlayers = async () => {
+    const { data } = await supabase
+      .from('user_profiles')
+      .select('id, created_by, display_name, username, email, xp, level')
+      .order('display_name', { ascending: true });
+    setAllPlayers(data || []);
+  };
+
+  const executeBan = async () => {
+    if (banPassword !== 'Tajin282') { setBanError('Incorrect password.'); return; }
+    setBanLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ban-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetUserId: banTarget.created_by,
+          reason: banReason,
+          callerToken: session.access_token,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Ban failed');
+      setAllPlayers(prev => prev.filter(p => p.created_by !== banTarget.created_by));
+      setBanTarget(null); setBanReason(''); setBanPassword(''); setBanStep('reason'); setBanError('');
+    } catch (e) { setBanError(e.message); }
+    setBanLoading(false);
+  };
 
   useEffect(() => { auth.me().then(setUser).catch(() => {}); }, []);
 
@@ -652,6 +693,138 @@ export default function Dashboard() {
           }
         </div>
       </div>
+    )}
+    {/* ── MONITOR PANEL (Carlos only) ───────────────────────── */}
+    {isCarlos && (
+      <>
+        <button
+          onClick={() => { setShowMonitor(true); loadPlayers(); }}
+          style={{
+            position: 'fixed', bottom: 80, right: 20, zIndex: 999,
+            background: 'linear-gradient(135deg,#1a1a2e,#16213e)',
+            border: '1px solid rgba(184,151,58,0.4)', borderRadius: 14,
+            padding: '10px 18px', color: '#B8973A', fontWeight: 700,
+            fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center',
+            gap: 8, boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+          }}
+        >
+          <Shield size={16} /> Monitor
+        </button>
+
+        {showMonitor && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 20,
+          }}>
+            <div style={{
+              background: '#111114', border: '1px solid rgba(184,151,58,0.25)',
+              borderRadius: 20, width: '100%', maxWidth: 540,
+              maxHeight: '85vh', display: 'flex', flexDirection: 'column',
+              overflow: 'hidden',
+            }}>
+              {/* Header */}
+              <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Shield size={18} style={{ color: '#B8973A' }} />
+                  <span style={{ fontWeight: 700, fontSize: 16, color: '#F0EDE6' }}>Monitor</span>
+                  <span style={{ fontSize: 11, color: 'rgba(240,237,230,0.35)', background: 'rgba(184,151,58,0.1)', border: '1px solid rgba(184,151,58,0.2)', borderRadius: 6, padding: '2px 8px' }}>{allPlayers.length} players</span>
+                </div>
+                <button onClick={() => { setShowMonitor(false); setBanTarget(null); setBanReason(''); setBanPassword(''); setBanStep('reason'); setBanError(''); }}
+                  style={{ background: 'none', border: 'none', color: 'rgba(240,237,230,0.4)', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+              </div>
+
+              {/* Player list */}
+              {!banTarget && (
+                <div style={{ overflowY: 'auto', flex: 1, padding: '8px 0' }}>
+                  {allPlayers.map((pl, i) => (
+                    <div key={pl.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 24px',
+                      borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    }}>
+                      <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(184,151,58,0.12)', border: '1px solid rgba(184,151,58,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, color: '#B8973A', flexShrink: 0 }}>
+                        {(pl.display_name || pl.username || '?')[0].toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#F0EDE6' }}>{pl.display_name || pl.username}</p>
+                        <p style={{ margin: 0, fontSize: 11, color: 'rgba(240,237,230,0.35)' }}>@{pl.username} · {(pl.xp || 0).toLocaleString()} XP</p>
+                      </div>
+                      <button
+                        onClick={() => { setBanTarget(pl); setBanStep('reason'); setBanReason(''); setBanPassword(''); setBanError(''); }}
+                        style={{ background: 'rgba(255,60,60,0.08)', border: '1px solid rgba(255,60,60,0.25)', borderRadius: 8, padding: '5px 12px', color: '#ff4d4d', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                      >Ban</button>
+                    </div>
+                  ))}
+                  {allPlayers.length === 0 && (
+                    <p style={{ textAlign: 'center', padding: 40, color: 'rgba(240,237,230,0.3)', fontSize: 13 }}>No players found</p>
+                  )}
+                </div>
+              )}
+
+              {/* Ban flow */}
+              {banTarget && (
+                <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'rgba(255,60,60,0.06)', border: '1px solid rgba(255,60,60,0.2)', borderRadius: 12 }}>
+                    <AlertTriangle size={16} style={{ color: '#ff4d4d', flexShrink: 0 }} />
+                    <div>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#ff4d4d' }}>Banning {banTarget.display_name || banTarget.username}</p>
+                      <p style={{ margin: 0, fontSize: 11, color: 'rgba(240,237,230,0.4)' }}>This will permanently delete their account.</p>
+                    </div>
+                  </div>
+
+                  {banStep === 'reason' && (
+                    <>
+                      <div>
+                        <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(240,237,230,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 8 }}>Reason</label>
+                        <textarea
+                          value={banReason}
+                          onChange={e => setBanReason(e.target.value)}
+                          placeholder="Enter reason for ban..."
+                          rows={3}
+                          style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px 12px', color: '#F0EDE6', fontSize: 13, resize: 'none', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <button onClick={() => setBanTarget(null)} style={{ flex: 1, background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px', color: 'rgba(240,237,230,0.5)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                        <button
+                          onClick={() => { if (!banReason.trim()) { setBanError('Reason required.'); return; } setBanError(''); setBanStep('password'); }}
+                          style={{ flex: 2, background: 'rgba(255,60,60,0.15)', border: '1px solid rgba(255,60,60,0.35)', borderRadius: 10, padding: '10px', color: '#ff4d4d', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                        >Confirm Ban</button>
+                      </div>
+                    </>
+                  )}
+
+                  {banStep === 'password' && (
+                    <>
+                      <div>
+                        <label style={{ fontSize: 12, fontWeight: 700, color: 'rgba(240,237,230,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 8 }}>Admin Password</label>
+                        <input
+                          type="password"
+                          value={banPassword}
+                          onChange={e => { setBanPassword(e.target.value); setBanError(''); }}
+                          placeholder="Enter password to confirm..."
+                          style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: `1px solid ${banError ? 'rgba(255,60,60,0.5)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 10, padding: '10px 12px', color: '#F0EDE6', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                        />
+                        {banError && <p style={{ margin: '6px 0 0', fontSize: 12, color: '#ff4d4d' }}>{banError}</p>}
+                      </div>
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <button onClick={() => { setBanStep('reason'); setBanError(''); }} style={{ flex: 1, background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '10px', color: 'rgba(240,237,230,0.5)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Back</button>
+                        <button
+                          onClick={executeBan}
+                          disabled={banLoading}
+                          style={{ flex: 2, background: banLoading ? 'rgba(255,60,60,0.05)' : 'rgba(255,60,60,0.2)', border: '1px solid rgba(255,60,60,0.4)', borderRadius: 10, padding: '10px', color: '#ff4d4d', fontWeight: 700, fontSize: 13, cursor: banLoading ? 'not-allowed' : 'pointer' }}
+                        >{banLoading ? 'Banning...' : 'Execute Ban'}</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </>
     )}
     </>
   );

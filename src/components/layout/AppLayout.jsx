@@ -19,7 +19,7 @@ export default function AppLayout() {
       </div>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 ${collapsed ? 'md:ml-[72px]' : 'md:ml-[240px]'} pb-20 md:pb-0`}>
+      <main className={`transition-all duration-300 ${collapsed ? 'md:ml-[72px]' : 'md:ml-[240px]'} pb-20 md:pb-0 min-h-screen bg-[#0c0c0e]`}>
         <Outlet />
       </main>
     </div>

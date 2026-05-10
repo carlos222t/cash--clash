@@ -84,7 +84,7 @@ export const profilesApi = {
   searchByUsername: async (query) => {
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('id, created_by, username, display_name, avatar_id, custom_avatar_url, banner_color, level, xp, badges, battles_won, tournament_wins, bio')
+      .select('id, created_by, username, display_name, avatar_id, custom_avatar_url, banner_color, card_bg_color, challenge_btn_color, friend_btn_color, stat_card_color, level, xp, badges, battles_won, tournament_wins, bio')
       .ilike('username', `%${query}%`)
       .limit(20);
     if (error) throw error;
@@ -102,7 +102,7 @@ export const profilesApi = {
   getByUsername: async (username) => {
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('id, created_by, username, display_name, avatar_id, custom_avatar_url, banner_color, level, xp, badges, battles_won, tournament_wins, bio')
+      .select('id, created_by, username, display_name, avatar_id, custom_avatar_url, banner_color, card_bg_color, challenge_btn_color, friend_btn_color, stat_card_color, level, xp, badges, battles_won, tournament_wins, bio')
       .eq('username', username)
       .single();
     if (error) throw error;
@@ -111,12 +111,23 @@ export const profilesApi = {
   leaderboard: async (orderCol = 'xp', limit = 50) => {
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('id, created_by, username, display_name, avatar_id, custom_avatar_url, level, xp, battles_won, tournament_wins, badges, bio')
+      .select('id, created_by, username, display_name, avatar_id, custom_avatar_url, banner_color, card_bg_color, challenge_btn_color, friend_btn_color, stat_card_color, level, xp, battles_won, tournament_wins, badges, bio')
       .order(orderCol, { ascending: false })
       .limit(limit);
     if (error) throw error;
     return data;
   },
+  updateByUserId: async (userId, patch) => {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update(patch)
+      .eq('created_by', userId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
 };
 
 export const friendsApi = {

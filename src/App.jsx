@@ -1,5 +1,6 @@
 import { Analytics } from "@vercel/analytics/react"
 import { Toaster } from "@/components/ui/toaster"
+import CryptoPackOpener from './pages/CryptoPackOpener';
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
@@ -23,7 +24,9 @@ import Goals from './pages/Goals';
 import Clans from './pages/Clans';
 import StockMarket from './pages/StockMarket';
 import Learn from './pages/Learn';
+import Customize from './pages/Customize';
 import Study from './pages/Study';
+import Diary from './pages/Diary';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isAuthenticated } = useAuth();
@@ -47,6 +50,7 @@ const AuthenticatedApp = () => {
         <Route path="/" element={isAuthenticated ? <Navigate to="/Dashboard" replace /> : <Navigate to="/login" replace />} />
         <Route element={isAuthenticated ? <AppLayout /> : <Navigate to="/login" replace />}>
           <Route path="/Dashboard"   element={<Dashboard />} />
+          <Route path="/Packs" element={<CryptoPackOpener />} />
           <Route path="/Budget"      element={<Budget />} />
           <Route path="/Challenges"  element={<Challenges />} />
           <Route path="/Badges"      element={<Badges />} />
@@ -59,8 +63,10 @@ const AuthenticatedApp = () => {
           <Route path="/StockMarket" element={<StockMarket />} />
           <Route path="/Learn" element={<Learn />} />
           <Route path="/GoalGuide" element={<GoalGuide />} />
+          <Route path="/Customize" element={<Customize />} />
           <Route path="/StockSense" element={<StockSense />} />
           <Route path="/Study" element={<Study />} />
+          <Route path="/Diary" element={<Diary />} />
         </Route>
     
         <Route path="*" element={<PageNotFound />} />

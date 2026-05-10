@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { auth, entities, profilesApi, notificationsApi, friendsApi, supabase } from '@/api/supabaseClient';
-import { XP_ACTIONS, getLevelFromXP } from '@/components/game/GameUtils';
+import { XP_ACTIONS, getLevelFromXP, COIN_ACTIONS } from '@/components/game/GameUtils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import {
   Swords, Plus, Trophy, Clock, CheckCircle, Target, AtSign, Info, Users, Zap,
   ChevronDown, ChevronUp, CheckCircle2, Circle, Flame, BookOpen, Upload, AlertTriangle,
   ExternalLink, HelpCircle, X, Camera, ShieldCheck, Eye, MessageSquare, ThumbsUp, ThumbsDown,
+  Crown, Star, GitBranch,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -298,139 +299,83 @@ const INDEX_FUND_QUESTIONS = [
   },
 ];
 
+const STRATEGIC_TACTICAL_QUESTIONS = [
+  { question: 'What is the core difference between Strategic and Tactical Asset Allocation?', options: ['A) Strategic allocation changes monthly; tactical stays fixed forever.','B) Strategic sets a long-term fixed target mix; tactical actively shifts weights to exploit short-term market conditions.','C) Tactical allocation is only used for retirement accounts.','D) Strategic allocation only invests in stocks; tactical only in bonds.'], answer: 1 },
+  { question: 'Which approach requires more frequent trading and monitoring?', options: ['A) Strategic Asset Allocation, because it rebalances every day.','B) Both require identical trading frequency.','C) Tactical Asset Allocation, because it adjusts positions based on short-term opportunities.','D) Neither — both are fully passive strategies.'], answer: 2 },
+  { question: 'A long-term investor who sets a 60/40 stock-to-bond portfolio and rebalances annually is most likely using which strategy?', options: ['A) Tactical Asset Allocation','B) Strategic Asset Allocation','C) Arbitrage','D) Dividend Growth Investing'], answer: 1 },
+];
+const DIVIDEND_GROWTH_QUESTIONS = [
+  { question: 'What is the main focus of Dividend Growth Investing?', options: ['A) Buying stocks with the highest current dividend yield, regardless of growth prospects.','B) Owning companies with a consistent history of growing their dividends over time.','C) Avoiding all dividend-paying stocks in favor of pure capital appreciation.','D) Only investing in government bonds that pay fixed interest.'], answer: 1 },
+  { question: 'What is a key risk of chasing High Yield dividend stocks?', options: ['A) They always outperform the market over 10 years.','B) A very high yield can signal that the stock price has dropped due to company problems, making the dividend unsustainable.','C) They are exempt from capital gains taxes.','D) High yield stocks are always found in the technology sector.'], answer: 1 },
+  { question: 'Which metric best indicates a dividend is sustainable and likely to keep growing?', options: ['A) A payout ratio above 95%.','B) A company with 25+ consecutive years of dividend increases (a "Dividend Aristocrat").','C) A yield that is more than double the market average.','D) The stock being listed on a foreign exchange.'], answer: 1 },
+];
+const STRATEGIC_GIFTING_QUESTIONS = [
+  { question: 'What is the primary financial goal of "strategic gifting"?', options: ['A) To give gifts that maximize your personal income tax refund.','B) To transfer wealth to heirs and reduce the size of your taxable estate during your lifetime.','C) To receive gifts from family members tax-free.','D) To donate to charity and receive a 100% tax credit.'], answer: 1 },
+  { question: 'What is the IRS Annual Gift Tax Exclusion designed to allow?', options: ['A) You can give unlimited amounts to any charity tax-free.','B) You can gift up to a set amount per person per year without it counting against your lifetime estate/gift tax exemption.','C) All gifts between family members are automatically exempt from taxes.','D) You can deduct the full value of any gift from your ordinary income.'], answer: 1 },
+  { question: 'Which of these is an example of a strategic gifting vehicle that can pay for education tax-free?', options: ['A) A traditional 401(k)','B) A Health Savings Account (HSA)','C) A 529 College Savings Plan','D) A Certificate of Deposit (CD)'], answer: 2 },
+];
+const TRUST_QUESTIONS = [
+  { question: 'What is the fundamental difference between a Revocable and an Irrevocable Trust?', options: ['A) Revocable trusts are only for married couples; irrevocable trusts are for individuals.','B) A revocable trust can be changed or cancelled by the grantor; an irrevocable trust generally cannot be modified once created.','C) Irrevocable trusts are free to set up; revocable trusts cost thousands of dollars.','D) Only irrevocable trusts can hold real estate.'], answer: 1 },
+  { question: 'Which type of trust provides stronger protection from creditors and estate taxes?', options: ['A) Revocable Trust, because the grantor retains full control.','B) Both provide identical creditor protection.','C) Irrevocable Trust, because the assets are no longer legally owned by the grantor.','D) Neither trust offers any protection from creditors.'], answer: 2 },
+  { question: 'A revocable living trust is often used to avoid what legal process?', options: ['A) Paying income taxes on investment gains.','B) Probate — the court-supervised process of distributing assets after death.','C) Filing annual tax returns.','D) Paying property taxes on real estate held in the trust.'], answer: 1 },
+];
+const LIFESTYLE_CREEP_QUESTIONS = [
+  { question: 'What is "Lifestyle Creep" (also called lifestyle inflation)?', options: ['A) A situation where your investments grow faster than inflation.','B) The gradual increase in spending that occurs when rising income leads to higher personal expenses, leaving savings unchanged.','C) A tax strategy that reduces your taxable income each year.','D) The process of downgrading your lifestyle to save more money.'], answer: 1 },
+  { question: 'Which strategy is most effective at preventing lifestyle creep after a raise?', options: ['A) Spending the entire raise immediately to enjoy the reward of your hard work.','B) Waiting to see if the raise is permanent before spending any of it.','C) Automatically directing a portion of every raise into savings or investments before you can spend it.','D) Using the raise to pay for more expensive leisure activities.'], answer: 2 },
+  { question: 'Why is lifestyle creep considered dangerous for long-term wealth building?', options: ['A) Because spending more money always leads to debt.','B) Because it quietly erodes your savings rate and makes it very hard to build wealth even with a high income.','C) Because it is illegal in most states to increase spending after a raise.','D) Because it causes your credit score to drop significantly.'], answer: 1 },
+];
+const DECISION_FRAMEWORK_QUESTIONS = [
+  { question: 'What is the primary purpose of using a structured decision framework?', options: ['A) To guarantee that every decision results in the best possible outcome.','B) To remove emotion and bias from the decision-making process by using a repeatable, logical structure.','C) To make decisions faster by skipping the analysis step.','D) To delegate all major decisions to a financial advisor.'], answer: 1 },
+  { question: 'In a decision framework, what role does defining the problem clearly play?', options: ['A) It is optional — you can start evaluating options without defining the problem.','B) It is the least important step because the options are what really matter.','C) It is the critical first step, as a poorly defined problem leads to evaluating the wrong solutions.','D) It only matters for financial decisions, not personal ones.'], answer: 2 },
+  { question: 'Which of these best describes the "second-order thinking" concept sometimes used in decision frameworks?', options: ['A) Only considering the immediate, obvious outcome of a decision.','B) Asking "and then what?" to consider the downstream consequences of a decision, not just the first result.','C) Making every decision twice to confirm the first choice was correct.','D) Always choosing the second option presented to avoid the anchoring bias of the first.'], answer: 1 },
+];
+const ARBITRAGE_QUESTIONS = [
+  { question: 'What is the core definition of Arbitrage?', options: ['A) Borrowing money at a low interest rate to invest in high-risk assets.','B) Simultaneously buying and selling the same (or equivalent) asset in different markets to profit from a price difference.','C) A long-term investment strategy focused on holding undervalued stocks.','D) Selling all investments when the market is at its peak.'], answer: 1 },
+  { question: 'Why do most pure arbitrage opportunities disappear quickly in modern markets?', options: ['A) Regulators make them illegal within 24 hours of being discovered.','B) Institutional investors and algorithmic traders identify and exploit price gaps so rapidly that they close almost immediately.','C) Arbitrage requires physical delivery of goods, which takes weeks.','D) Banks charge fees that make all arbitrage unprofitable.'], answer: 1 },
+  { question: 'Which of the following is a real-world, practical form of "retail arbitrage"?', options: ["A) Shorting a company's stock on one exchange while buying it on another.",'B) Buying discounted clearance items from one store and reselling them at a higher price on an online marketplace.','C) Using a credit card with 0% APR to invest in treasury bonds.','D) Exchanging foreign currency at the airport for a better rate.'], answer: 1 },
+];
+const SBLOC_QUESTIONS = [
+  { question: 'What is a Securities-Backed Line of Credit (SBLOC)?', options: ['A) A loan from your broker that requires you to sell your investments to receive funds.','B) A revolving line of credit where your investment portfolio serves as collateral, letting you borrow without selling your assets.','C) A type of mortgage backed by government securities.','D) A savings account offered by brokerage firms with higher interest rates.'], answer: 1 },
+  { question: 'What is a major risk of using an SBLOC?', options: ['A) You will lose your brokerage account permanently if you use this feature.','B) Interest rates on SBLOCs are always higher than credit card rates.','C) If your portfolio value drops significantly, the lender can issue a "maintenance call," requiring you to repay part of the loan or pledge more assets.','D) SBLOCs are only available to corporations, not individuals.'], answer: 2 },
+  { question: 'Why do wealthy investors sometimes prefer an SBLOC over selling investments to access cash?', options: ['A) Selling investments is illegal for high-net-worth individuals.','B) SBLOCs are always free with no interest charges.','C) Borrowing against a portfolio avoids triggering a taxable capital gains event and allows investments to continue growing.','D) The IRS requires investors with over $1M to use SBLOCs instead of selling.'], answer: 2 },
+];
+
 // ── CHALLENGE POOL ─────────────────────────────────────────────────────────
 const CHALLENGE_POOL = {
-  financial: [
-    {
-      id: 'f1',
-      text: 'Commit to at least one "No-Spend" day where you only use what you already have at home.',
-      completionType: 'photo',
-      photoPrompt: 'Upload a photo proving your No-Spend day (e.g., a picture of items you already had at home).',
-    },
-    {
-      id: 'f2',
-      text: 'Meal prep for 3 days to reduce spending and save time.',
-      completionType: 'photo',
-      photoPrompt: 'Upload a photo of your meal prep containers or prepped food.',
-    },
-    {
-      id: 'f3',
-      text: 'Set up (or add another) weekly automatic transfer of 0.0001× your current monthly salary into your savings account.',
-      completionType: 'photo',
-      photoPrompt: 'Upload a screenshot of your automatic transfer confirmation (blur account numbers and personal info).',
-    },
-    {
-      id: 'f4',
-      text: 'Study one of these High-Yield Savings Accounts (HYSAs)',
-      link: 'https://www.bestmoney.com/online-banking/compare-savings-accounts?utm_source=google&kw=hysa&sk=hysa&c=754435351814&t=search&p=&m=e&dev=c&network=g&campaignid=22602285091&devmod=&mobval=0&groupid=183812048567&targetid=kwd-498508174472&interest=&physical=1026339&feedid=&eid=&a=11000&topic=Google_Savings_Desktop&ctype=&camtype=ps&ts=HYSA&niche=&exp=&pq=&dyn=&gad_source=1&gad_campaignid=22602285091&gbraid=0AAAAACvAeKTFuegNdIuobh7k0HQOM8C7I&gclid=EAIaIQobChMIzujvk_SalAMVuVJ_AB3vlQXuEAAYASAAEgJbOfD_BwE',
-      completionType: 'quiz',
-      quizType: 'hysa',
-      passingScore: 'perfect', // must get both APY definition + account question right on first try; else 1 day cooldown
-    },
+  bank_account: [
+    { id: 'ba1', text: 'Commit to at least one "No-Spend" day where you only use what you already have at home.', completionType: 'photo', photoPrompt: 'Upload a photo proving your No-Spend day (e.g., a picture of items you already had at home).' },
+    { id: 'ba2', text: 'Only spend cash for a day, and review your spending habits.', completionType: 'direct' },
+    { id: 'ba3', text: 'Keep your finances in check — set a low balance notification.', completionType: 'photo', photoPrompt: 'Upload a screenshot of your low balance notification being set (blur any sensitive account info).' },
   ],
-  savings: [
-    {
-      id: 's1',
-      text: 'Finish a chapter, and complete a quiz within the learning tab.',
-      completionType: 'direct',
-    },
-    {
-      id: 's2',
-      text: 'Learn about what is a Roth IRA.',
-      link: 'https://www.fidelity.com/learning-center/smart-money/what-is-a-roth-ira',
-      completionType: 'quiz',
-      quizType: 'roth_ira',
-      passingScore: 4, // 4/5
-    },
-    {
-      id: 's3',
-      text: 'Keep your finances in check by adjusting alerts, and set a low balance notification.',
-      completionType: 'photo',
-      photoPrompt: 'Upload a screenshot of your low balance notification being set (blur any sensitive account info).',
-    },
-    {
-      id: 's4',
-      text: 'Only spend cash for a day, and review your spending habits.',
-      completionType: 'direct',
-    },
+  savings_account: [
+    { id: 'sa1', text: 'Set up (or add another) weekly automatic transfer of $5 into savings.', completionType: 'photo', photoPrompt: 'Upload a screenshot of your automatic $5 transfer confirmation (blur account numbers and personal info).' },
   ],
-  spending: [
-    {
-      id: 'c1',
-      text: 'Learn about tax-loss harvesting.',
-      link: 'https://investor.vanguard.com/investor-resources-education/taxes/offset-gains-loss-harvesting',
-      completionType: 'quiz',
-      quizType: 'tax_loss',
-      passingScore: 4, // 4/5
-    },
-    {
-      id: 'c2',
-      text: 'While shopping, compare unit prices to make more cost-effective decisions.',
-      completionType: 'direct',
-    },
-    {
-      id: 'c3',
-      text: 'Review and refine your "Financial Independence" number as your expenses or goals change.',
-      completionType: 'fi_calculator',
-    },
-    {
-      id: 'c4',
-      text: 'Stay aware of your money\'s value by checking and reflecting on inflation trends at least 3 times this week in the stock tab.',
-      completionType: 'direct',
-    },
-  ],
-  social: [
-    {
-      id: 'so1',
-      text: 'Use and research the Rule of 72 weekly to better understand growth opportunities.',
-      completionType: 'direct',
-    },
-    {
-      id: 'so2',
-      text: 'Take 30 minutes to reflect on and address 5 of your financial anxieties, writing them down.',
-      completionType: 'photo',
-      photoPrompt: 'Upload a photo of your written financial anxieties (paper or document — no screen required).',
-    },
-    {
-      id: 'so3',
-      text: 'Compare investment strategies (index funds vs. active management).',
-      link: 'https://investor.vanguard.com/investor-resources-education/understanding-investment-types/index-funds-vs-actively-managed-funds',
-      completionType: 'quiz',
-      quizType: 'index_funds',
-      passingScore: 4,
-    },
-    {
-      id: 'so4',
-      text: 'Stay aware of your money\'s value by checking and reflecting on inflation trends at least 3 times this week in the stock tab.',
-      completionType: 'direct',
-    },
-  ],
-  growth: [
-    {
-      id: 'g1',
-      text: 'Expand your skills by learning and trying one new low-cost recipe this week.',
-      completionType: 'photo',
-      photoPrompt: 'Upload a photo of the recipe you made (show the dish or the recipe card).',
-    },
-    {
-      id: 'g2',
-      text: 'Review and update your beneficiaries to ensure everything stays accurate.',
-      completionType: 'direct',
-    },
-    {
-      id: 'g3',
-      text: 'Build motivation by adding to your "Success Folder" each week, tracking wins like saving milestones or income growth.',
-      completionType: 'direct',
-    },
+  all: [
+    { id: 'al1', text: 'Meal prep for 3 days to reduce spending and save time.', completionType: 'photo', photoPrompt: 'Upload a photo of your meal prep containers or prepped food.' },
+    { id: 'al2', text: 'Study one of these High-Yield Savings Accounts (HYSAs).', link: 'https://www.bestmoney.com/online-banking/compare-savings-accounts?utm_source=google&kw=hysa&sk=hysa&c=754435351814&t=search&p=&m=e&dev=c&network=g&campaignid=22602285091&devmod=&mobval=0&groupid=183812048567&targetid=kwd-498508174472&interest=&physical=1026339&feedid=&eid=&a=11000&topic=Google_Savings_Desktop&ctype=&camtype=ps&ts=HYSA&niche=&exp=&pq=&dyn=&gad_source=1&gad_campaignid=22602285091&gbraid=0AAAAACvAeKTFuegNdIuobh7k0HQOM8C7I&gclid=EAIaIQobChMIzujvk_SalAMVuVJ_AB3vlQXuEAAYASAAEgJbOfD_BwE', completionType: 'quiz', quizType: 'hysa', passingScore: 'perfect' },
+    { id: 'al3', text: 'Learn about what is a Roth IRA.', link: 'https://www.fidelity.com/learning-center/smart-money/what-is-a-roth-ira', completionType: 'quiz', quizType: 'roth_ira', passingScore: 4 },
+    { id: 'al4', text: 'Learn about tax-loss harvesting.', link: 'https://investor.vanguard.com/investor-resources-education/taxes/offset-gains-loss-harvesting', completionType: 'quiz', quizType: 'tax_loss', passingScore: 4 },
+    { id: 'al5', text: 'While shopping, compare unit prices to make more cost-effective decisions.', completionType: 'direct' },
+    { id: 'al6', text: 'Review and refine your "Financial Independence" number as your expenses or goals change.', completionType: 'fi_calculator' },
+    { id: 'al7', text: 'Take 30 minutes to reflect on and write down 5 financial anxieties.', completionType: 'photo', photoPrompt: 'Upload a photo of your written financial anxieties (paper or document — no screen required).' },
+    { id: 'al8', text: 'Compare investment strategies (index funds vs. active management).', link: 'https://investor.vanguard.com/investor-resources-education/understanding-investment-types/index-funds-vs-actively-managed-funds', completionType: 'quiz', quizType: 'index_funds', passingScore: 4 },
+    { id: 'al9', text: 'Expand your skills by learning and trying one new low-cost recipe this week.', completionType: 'photo', photoPrompt: 'Upload a photo of the recipe you made (show the dish or the recipe card).' },
+    { id: 'al10', text: 'Add a success or failure entry to your personal diary.', completionType: 'diary' },
+    { id: 'al11', text: 'Compare investment strategies: Strategic vs. Tactical Asset Allocation.', link: 'https://cornerstoneportfolioresearch.com/financial-planning/strategic-vs-tactical-asset-allocation-key-differences-explained/', completionType: 'quiz', quizType: 'strategic_tactical', passingScore: 2 },
+    { id: 'al12', text: 'Compare investment strategies: Dividend Growth vs. High Yield.', link: 'https://www.youtube.com/watch?v=p-rlUb1PHkg', completionType: 'quiz', quizType: 'dividend_growth', passingScore: 2 },
+    { id: 'al13', text: 'Learn about Strategic Gifting.', link: 'https://www.youtube.com/watch?v=dvKpQYSAM_A', completionType: 'quiz', quizType: 'strategic_gifting', passingScore: 2 },
+    { id: 'al14', text: 'Study the difference between Revocable and Irrevocable Trusts.', link: 'https://www.youtube.com/watch?v=vgpKyB2DHKw', completionType: 'quiz', quizType: 'trusts', passingScore: 2 },
+    { id: 'al15', text: 'Understand Lifestyle Creep Management.', link: 'https://www.youtube.com/watch?v=L4Y-HjQBEyE', completionType: 'quiz', quizType: 'lifestyle_creep', passingScore: 2 },
+    { id: 'al16', text: 'Understand Decision Frameworks.', link: 'https://www.youtube.com/watch?v=fo0qfcER3sY', completionType: 'quiz', quizType: 'decision_frameworks', passingScore: 2 },
+    { id: 'al17', text: 'Learn about Arbitrage.', link: 'https://www.youtube.com/watch?v=MhwrQpXQq4I', completionType: 'quiz', quizType: 'arbitrage', passingScore: 2 },
+    { id: 'al18', text: 'Watch and learn about SBLOCs (Securities-Backed Lines of Credit).', link: 'https://www.youtube.com/watch?v=AOrmfr-vpC0', completionType: 'quiz', quizType: 'sbloc', passingScore: 2 },
   ],
 };
 
 const CATEGORY_LABELS = {
-  financial: { label: 'Financial Discipline', icon: 'F' },
-  savings:   { label: 'Savings Milestones',   icon: 'S' },
-  spending:  { label: 'Spending Reduction',    icon: 'R' },
-  social:    { label: 'Social & Competitive',  icon: 'C' },
-  growth:    { label: 'Growth & Education',    icon: 'G' },
+  bank_account:    { label: 'Bank Account',    icon: 'B' },
+  savings_account: { label: 'Savings Account', icon: 'S' },
+  all:             { label: 'All',             icon: 'A' },
 };
 
 function pickTwoFrom(arr) {
@@ -445,7 +390,7 @@ function generateRushTasks() {
 }
 
 // ── HYSA QUIZ COMPONENT ────────────────────────────────────────────────────
-function HYSAQuiz({ onComplete, onFail }) {
+function HYSAQuiz({ onComplete, onFail, cooldownKey }) {
   const [step, setStep] = useState('definition'); // 'definition' | 'pick_account' | 'account_question'
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [definitionAnswer, setDefinitionAnswer] = useState(null);
@@ -459,6 +404,7 @@ function HYSAQuiz({ onComplete, onFail }) {
         setStep('pick_account');
         setSubmitted(false);
       } else {
+        if (cooldownKey) localStorage.setItem(cooldownKey, new Date(Date.now() + 24*3600*1000).toISOString());
         onFail('Incorrect answer on APY definition. 1-day cooldown applied.');
       }
     }, 800);
@@ -471,6 +417,7 @@ function HYSAQuiz({ onComplete, onFail }) {
       if (correctBoth) {
         onComplete();
       } else {
+        if (cooldownKey) localStorage.setItem(cooldownKey, new Date(Date.now() + 24*3600*1000).toISOString());
         onFail('Incorrect answer. 1-day cooldown applied.');
       }
     }, 800);
@@ -834,27 +781,26 @@ function ProofUpload({ prompt, onUpload, existingUrl }) {
 function TaskCompletionModal({ task, userId, onComplete, onClose }) {
   const [proofUrl, setProofUrl] = useState(null);
   const [quizPassed, setQuizPassed] = useState(false);
-  const [cooldownMsg, setCooldownMsg] = useState(null);
-  const [fiDone, setFiDone] = useState(false);
-
   const type = task.completionType || 'direct';
   const hasLink = !!task.link;
   const quizCooldownKey = type === 'quiz' ? `quiz_cooldown_${task.id}_${userId}` : null;
 
-  // Block quiz retake if cooldown active
-  useEffect(() => {
-    if (!quizCooldownKey) return;
-    const stored = localStorage.getItem(quizCooldownKey);
-    if (stored) {
-      const cooldownEnd = new Date(stored);
-      if (new Date() < cooldownEnd) {
-        const hoursLeft = Math.ceil((cooldownEnd - new Date()) / 3600000);
-        setCooldownMsg(`You failed this quiz recently. Come back in ${hoursLeft}h to try again.`);
-      } else {
-        localStorage.removeItem(quizCooldownKey);
-      }
+  const [cooldownMsg, setCooldownMsg] = useState(() => {
+    if (type !== 'quiz') return null;
+    const key = `quiz_cooldown_${task.id}_${userId}`;
+    const stored = localStorage.getItem(key);
+    if (!stored) return null;
+    const end = new Date(stored);
+    if (new Date() < end) {
+      const h = Math.ceil((end - new Date()) / 3600000);
+      return `You failed this quiz recently. Try again in ${h}h.`;
     }
-  }, [quizCooldownKey]);
+    localStorage.removeItem(key);
+    return null;
+  });
+  const [fiDone, setFiDone] = useState(false);
+
+
 
   const handleComplete = () => {
     if (type === 'photo' && !proofUrl) {
@@ -951,7 +897,7 @@ function TaskCompletionModal({ task, userId, onComplete, onClose }) {
 
             {/* Render by type */}
             {type === 'quiz' && task.quizType === 'hysa' && (
-              <HYSAQuiz onComplete={handleQuizPass} onFail={handleQuizFail} />
+              <HYSAQuiz onComplete={handleQuizPass} onFail={handleQuizFail} cooldownKey={quizCooldownKey} />
             )}
 
             {type === 'quiz' && task.quizType === 'roth_ira' && (
@@ -966,30 +912,74 @@ function TaskCompletionModal({ task, userId, onComplete, onClose }) {
               <StandardQuiz questions={INDEX_FUND_QUESTIONS} passingScore={task.passingScore} onComplete={handleQuizPass} onFail={handleQuizFail} cooldownKey={quizCooldownKey} />
             )}
 
-            {type === 'photo' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <ProofUpload
-                  prompt={task.photoPrompt}
-                  onUpload={setProofUrl}
-                  existingUrl={null}
-                />
-                <button
-                  onClick={handleComplete}
-                  disabled={!proofUrl}
-                  style={quizBtnStyle(!!proofUrl)}
-                >
-                  <Upload style={{ width: 13, height: 13, display: 'inline', marginRight: 6 }} />
-                  Submit Proof for Review
-                </button>
-                <p style={{ fontSize: 10, color: T.textMuted, margin: 0, textAlign: 'center' }}>
-                  The owner will review and approve your submission.
-                </p>
-              </div>
-            )}
+            {type === 'photo' && (() => {
+              const myPending = task.pending_review?.[userId];
+              const myProof   = task.proof_urls?.[userId];
+              const isDenied  = task.denied_users?.[userId];
+
+              if (isDenied) return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ padding: '12px 14px', borderRadius: 10, background: T.dangerDim, border: '1px solid rgba(192,57,43,0.3)' }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: T.danger, margin: '0 0 4px' }}>Proof Denied</p>
+                    <p style={{ fontSize: 11, color: T.textMuted, margin: 0 }}>{isDenied.reason}</p>
+                  </div>
+                  <ProofUpload prompt={task.photoPrompt} onUpload={setProofUrl} existingUrl={null} />
+                  <button onClick={handleComplete} disabled={!proofUrl} style={quizBtnStyle(!!proofUrl)}>
+                    <Upload style={{ width: 13, height: 13, display: 'inline', marginRight: 6 }} />
+                    Resubmit Proof
+                  </button>
+                </div>
+              );
+
+              if (myPending) return (
+                <div style={{ padding: '20px', textAlign: 'center', borderRadius: 12, background: 'rgba(91,155,213,0.08)', border: '1px solid rgba(91,155,213,0.25)' }}>
+                  <Clock style={{ width: 24, height: 24, color: T.info, margin: '0 auto 10px' }} />
+                  <p style={{ fontSize: 13, fontWeight: 700, color: T.info, margin: '0 0 4px' }}>In Review</p>
+                  <p style={{ fontSize: 11, color: T.textMuted, margin: 0 }}>Your proof has been submitted and is waiting for owner approval.</p>
+                </div>
+              );
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <ProofUpload prompt={task.photoPrompt} onUpload={setProofUrl} existingUrl={null} />
+                  <button onClick={handleComplete} disabled={!proofUrl} style={quizBtnStyle(!!proofUrl)}>
+                    <Upload style={{ width: 13, height: 13, display: 'inline', marginRight: 6 }} />
+                    Submit Proof for Review
+                  </button>
+                  <p style={{ fontSize: 10, color: T.textMuted, margin: 0, textAlign: 'center' }}>
+                    The owner will review and approve your submission.
+                  </p>
+                </div>
+              );
+            })()}
 
             {type === 'fi_calculator' && (
               <FICalculator onComplete={handleFiComplete} />
             )}
+
+            {type === 'diary' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <p style={{ fontSize: 12, color: T.textMuted, margin: 0, lineHeight: 1.55 }}>
+                  Head to your Diary tab, add a success or failure entry, then come back and mark this complete.
+                </p>
+                <a href="/Diary" target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '9px 14px', borderRadius: 9, fontSize: 12, fontWeight: 600, background: T.goldDim, border: `1px solid ${T.goldBorder}`, color: T.gold, textDecoration: 'none' }}>
+                  <ExternalLink style={{ width: 12, height: 12 }} /> Open Diary
+                </a>
+                <button onClick={() => onComplete(null)} style={quizBtnStyle(true)}>
+                  <CheckCircle2 style={{ width: 13, height: 13, display: 'inline', marginRight: 6 }} />
+                  Mark as Complete
+                </button>
+              </div>
+            )}
+            {type === 'quiz' && task.quizType === 'strategic_tactical' && (<StandardQuiz questions={STRATEGIC_TACTICAL_QUESTIONS} passingScore={task.passingScore} onComplete={handleQuizPass} onFail={handleQuizFail} cooldownKey={quizCooldownKey} />)}
+            {type === 'quiz' && task.quizType === 'dividend_growth' && (<StandardQuiz questions={DIVIDEND_GROWTH_QUESTIONS} passingScore={task.passingScore} onComplete={handleQuizPass} onFail={handleQuizFail} cooldownKey={quizCooldownKey} />)}
+            {type === 'quiz' && task.quizType === 'strategic_gifting' && (<StandardQuiz questions={STRATEGIC_GIFTING_QUESTIONS} passingScore={task.passingScore} onComplete={handleQuizPass} onFail={handleQuizFail} cooldownKey={quizCooldownKey} />)}
+            {type === 'quiz' && task.quizType === 'trusts' && (<StandardQuiz questions={TRUST_QUESTIONS} passingScore={task.passingScore} onComplete={handleQuizPass} onFail={handleQuizFail} cooldownKey={quizCooldownKey} />)}
+            {type === 'quiz' && task.quizType === 'lifestyle_creep' && (<StandardQuiz questions={LIFESTYLE_CREEP_QUESTIONS} passingScore={task.passingScore} onComplete={handleQuizPass} onFail={handleQuizFail} cooldownKey={quizCooldownKey} />)}
+            {type === 'quiz' && task.quizType === 'decision_frameworks' && (<StandardQuiz questions={DECISION_FRAMEWORK_QUESTIONS} passingScore={task.passingScore} onComplete={handleQuizPass} onFail={handleQuizFail} cooldownKey={quizCooldownKey} />)}
+            {type === 'quiz' && task.quizType === 'arbitrage' && (<StandardQuiz questions={ARBITRAGE_QUESTIONS} passingScore={task.passingScore} onComplete={handleQuizPass} onFail={handleQuizFail} cooldownKey={quizCooldownKey} />)}
+            {type === 'quiz' && task.quizType === 'sbloc' && (<StandardQuiz questions={SBLOC_QUESTIONS} passingScore={task.passingScore} onComplete={handleQuizPass} onFail={handleQuizFail} cooldownKey={quizCooldownKey} />)}
 
             {type === 'direct' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1473,6 +1463,416 @@ function OwnerProofReviewTab({ challenges, onAccept, onReject }) {
   );
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TOURNAMENT BRACKET DISPLAY
+// ─────────────────────────────────────────────────────────────────────────────
+function TournamentBracket({ tournament, participants, currentUserId }) {
+  const size = tournament.size || 4;
+  const rounds = Math.log2(size);
+  const bracket = tournament.bracket || [];
+  const roundsData = [];
+  for (let r = 1; r <= rounds; r++) roundsData.push(bracket.filter(m => m.round === r));
+
+  const getLbl = (r, total) => {
+    if (r === total) return 'Final';
+    if (r === total - 1 && total >= 3) return 'Semi-Finals';
+    if (r === total - 2 && total >= 4) return 'Quarter-Finals';
+    return `Round ${r}`;
+  };
+
+  const myActiveMatch = bracket.find(m => m.status === 'active' && (m.p1_id === currentUserId || m.p2_id === currentUserId));
+
+  return (
+    <div style={{
+      background: 'linear-gradient(160deg, #0a0a0f 0%, #111118 60%, #0e0c08 100%)',
+      border: `2px solid ${T.goldBorder}`,
+      borderRadius: 20,
+      marginBottom: 8,
+      overflow: 'hidden',
+      boxShadow: '0 8px 40px rgba(184,151,58,0.12), 0 2px 8px rgba(0,0,0,0.6)',
+    }}>
+      {/* Gold top bar */}
+      <div style={{ height: 3, background: `linear-gradient(90deg, transparent, ${T.gold}, transparent)` }} />
+
+      {/* Header */}
+      <div style={{ padding: '18px 20px 14px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: `1px solid rgba(184,151,58,0.12)` }}>
+        <div style={{ width: 38, height: 38, borderRadius: 10, background: T.goldDim, border: `1px solid ${T.goldBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Crown style={{ width: 18, height: 18, color: T.gold }} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: 20, color: T.text, margin: 0, lineHeight: 1.1 }}>
+            {tournament.title}
+          </h3>
+          <p style={{ fontSize: 10, color: T.textMuted, margin: '2px 0 0', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            {size}-Player Bracket · {tournament.status === 'completed' ? 'Finished' : 'In Progress'}
+          </p>
+        </div>
+        {myActiveMatch && (
+          <div style={{ padding: '5px 12px', borderRadius: 99, background: 'rgba(184,151,58,0.2)', border: `1px solid ${T.goldBorder}`, fontSize: 10, fontWeight: 800, color: T.gold, letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+            Your Turn
+          </div>
+        )}
+        {tournament.winner_username && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 99, background: T.goldDim, border: `1px solid ${T.goldBorder}` }}>
+            <Trophy style={{ width: 11, height: 11, color: T.gold }} />
+            <span style={{ fontSize: 11, color: T.gold, fontWeight: 700 }}>@{tournament.winner_username}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Participants row */}
+      <div style={{ padding: '10px 20px', display: 'flex', gap: 6, flexWrap: 'wrap', borderBottom: `1px solid rgba(255,255,255,0.04)` }}>
+        {(tournament.participants || []).map((p, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 99, background: p.userId === currentUserId ? T.goldDim : 'rgba(255,255,255,0.04)', border: `1px solid ${p.userId === currentUserId ? T.goldBorder : T.border}` }}>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(184,151,58,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 700, color: T.gold }}>
+              {p.username?.[0]?.toUpperCase() || '?'}
+            </div>
+            <span style={{ fontSize: 10, fontWeight: p.userId === currentUserId ? 700 : 500, color: p.userId === currentUserId ? T.gold : T.textMuted }}>
+              @{p.username}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Bracket grid */}
+      <div style={{ padding: '16px 20px 20px', overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'stretch', minWidth: rounds * 175 }}>
+          {roundsData.map((roundMatches, rIdx) => {
+            const r = rIdx + 1;
+            const isLast = r === rounds;
+            const cellH = 90;
+            const gapBetween = rIdx === 0 ? 8 : (cellH + 8) * Math.pow(2, rIdx) - cellH;
+
+            return (
+              <div key={r} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div style={{
+                  fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase',
+                  color: isLast ? T.gold : T.textMuted,
+                  textAlign: 'center', marginBottom: 10, paddingBottom: 6,
+                  borderBottom: `1px solid ${isLast ? T.goldBorder : 'rgba(255,255,255,0.05)'}`,
+                }}>
+                  {getLbl(r, rounds)}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: gapBetween, paddingTop: rIdx === 0 ? 0 : (cellH + 8) * (Math.pow(2, rIdx) - 1) / 2 }}>
+                  {Array.from({ length: Math.max(roundMatches.length, size / Math.pow(2, r)) }).map((_, mIdx) => {
+                    const match = roundMatches[mIdx] || null;
+                    const p1 = match?.p1_username;
+                    const p2 = match?.p2_username;
+                    const winner = match?.winner_username;
+                    const isMyMatch = match && (match.p1_id === currentUserId || match.p2_id === currentUserId);
+                    const isActive = match?.status === 'active';
+
+                    return (
+                      <div key={mIdx} style={{
+                        borderRadius: 11,
+                        border: `1.5px solid ${isMyMatch && isActive ? T.goldBorder : isMyMatch ? 'rgba(184,151,58,0.3)' : T.border}`,
+                        overflow: 'hidden',
+                        background: isMyMatch && isActive ? 'linear-gradient(135deg, rgba(184,151,58,0.08), rgba(184,151,58,0.03))' : '#13131a',
+                        boxShadow: isMyMatch && isActive ? '0 0 20px rgba(184,151,58,0.18), inset 0 0 20px rgba(184,151,58,0.03)' : 'none',
+                        minWidth: 155,
+                        position: 'relative',
+                      }}>
+                        {isMyMatch && isActive && (
+                          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent, ${T.gold}, transparent)` }} />
+                        )}
+                        {[{ name: p1, id: match?.p1_id }, { name: p2, id: match?.p2_id }].map(({ name, id }, side) => (
+                          <div key={side} style={{
+                            display: 'flex', alignItems: 'center', gap: 7, padding: '10px 10px',
+                            background: winner && winner === name ? 'rgba(184,151,58,0.1)' : 'transparent',
+                            borderBottom: side === 0 ? `1px solid rgba(255,255,255,0.05)` : 'none',
+                            opacity: !name ? 0.3 : 1,
+                          }}>
+                            <div style={{
+                              width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                              background: id === currentUserId ? 'rgba(184,151,58,0.2)' : 'rgba(255,255,255,0.06)',
+                              border: `1.5px solid ${winner === name ? T.goldBorder : id === currentUserId ? 'rgba(184,151,58,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 10, fontWeight: 700, color: id === currentUserId ? T.gold : T.textMuted,
+                            }}>
+                              {name ? name[0].toUpperCase() : '?'}
+                            </div>
+                            <span style={{
+                              fontSize: 11, fontWeight: winner === name ? 700 : id === currentUserId ? 600 : 400,
+                              color: winner === name ? T.gold : id === currentUserId ? T.text : name ? T.textMuted : T.textDim,
+                              flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>
+                              {name ? `@${name}` : 'TBD'}
+                            </span>
+                            {winner === name && <Trophy style={{ width: 10, height: 10, color: T.gold, flexShrink: 0 }} />}
+                            {id === currentUserId && !winner && isActive && <Star style={{ width: 9, height: 9, color: T.gold, flexShrink: 0 }} />}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+
+          {tournament.winner_username && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingLeft: 10 }}>
+              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', color: T.gold, textTransform: 'uppercase', marginBottom: 10 }}>Champion</div>
+              <div style={{ padding: '16px 18px', borderRadius: 14, textAlign: 'center', background: T.goldDim, border: `1px solid ${T.goldBorder}`, boxShadow: '0 0 30px rgba(184,151,58,0.22)' }}>
+                <Crown style={{ width: 24, height: 24, color: T.gold, margin: '0 auto 8px' }} />
+                <p style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: 16, color: T.gold, margin: 0 }}>@{tournament.winner_username}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── CREATE TOURNAMENT DIALOG ─────────────────────────────────────────────────
+function CreateTournamentDialog({ open, onClose, user, myProfile, friendProfiles, onCreated }) {
+  const [size, setSize] = useState(4);
+  const [title, setTitle] = useState('');
+  // selectedPlayers: array of {username, userId, display_name, level, avatar, custom_avatar_url}
+  const [selectedPlayers, setSelectedPlayers] = useState([]);
+  const [manualInput, setManualInput] = useState('');
+  const [creating, setCreating] = useState(false);
+  const needed = size - 1;
+
+  useEffect(() => { setSelectedPlayers([]); }, [size]);
+
+  const addFriend = (fp) => {
+    if (selectedPlayers.length >= needed) return;
+    if (selectedPlayers.find(p => p.username === fp.username)) return;
+    setSelectedPlayers(prev => [...prev, {
+      username: fp.username,
+      userId: fp.created_by,
+      display_name: fp.display_name,
+      level: fp.level || 1,
+      custom_avatar_url: fp.custom_avatar_url,
+      fromFriend: true,
+    }]);
+  };
+
+  const addManual = async () => {
+    const u = manualInput.trim().replace('@', '');
+    if (!u) return;
+    if (selectedPlayers.length >= needed) { toast.error(`Already have ${needed} players selected`); return; }
+    if (selectedPlayers.find(p => p.username === u)) { toast.error('Already added'); return; }
+    try {
+      const p = await profilesApi.getByUsername(u);
+      if (!p) { toast.error(`@${u} not found`); return; }
+      setSelectedPlayers(prev => [...prev, {
+        username: p.username,
+        userId: p.created_by,
+        display_name: p.display_name,
+        level: p.level || 1,
+        custom_avatar_url: p.custom_avatar_url,
+        fromFriend: false,
+      }]);
+      setManualInput('');
+    } catch(e) { toast.error('User not found'); }
+  };
+
+  const removePlayer = (username) => setSelectedPlayers(prev => prev.filter(p => p.username !== username));
+
+  const handleCreate = async () => {
+    if (!title.trim()) { toast.error('Add a tournament title'); return; }
+    if (selectedPlayers.length < needed) { toast.error(`Select ${needed - selectedPlayers.length} more player(s)`); return; }
+    setCreating(true);
+    try {
+      const allParticipants = [
+        { userId: user.id, username: myProfile?.username, level: myProfile?.level || 1, avatar: myProfile?.avatar_preset || null },
+        ...selectedPlayers.map(p => ({ userId: p.userId, username: p.username, level: p.level || 1, avatar: null })),
+      ];
+      const shuffled = [...allParticipants].sort(() => Math.random() - 0.5);
+      const bracket = [];
+      for (let i = 0; i < size / 2; i++) {
+        bracket.push({
+          round: 1, match: i + 1,
+          p1_id: shuffled[i*2].userId, p1_username: shuffled[i*2].username,
+          p2_id: shuffled[i*2+1].userId, p2_username: shuffled[i*2+1].username,
+          winner_id: null, winner_username: null,
+          challenge_id: null, status: 'active',
+          tasks: generateRushTasks(),
+        });
+      }
+      const tournament = await entities.Tournament.create({
+        title: title.trim(), size, status: 'active', bracket,
+        participants: allParticipants, created_by: user.id,
+        creator_username: myProfile?.username, winner_id: null, winner_username: null,
+      });
+      for (const p of selectedPlayers) {
+        await notificationsApi.send({
+          recipient_id: p.userId, sender_id: user.id,
+          sender_username: myProfile?.username || 'Someone',
+          type: 'clash_invite', title: 'Tournament Invite',
+          body: `@${myProfile?.username} has invited you to the "${title.trim()}" tournament (${size}-player bracket). Head to Challenges to compete.`,
+          read: false,
+        }).catch(() => {});
+      }
+      toast.success('Tournament created! Invites sent to all players.');
+      onCreated(tournament);
+    } catch(e) {
+      console.error('Tournament creation error:', e);
+      toast.error(e.message || e.details || e.hint || 'Failed to create tournament');
+    } finally { setCreating(false); }
+  };
+
+  if (!open) return null;
+
+  const availableFriends = (friendProfiles || []).filter(fp =>
+    fp.username !== myProfile?.username &&
+    !selectedPlayers.find(p => p.username === fp.username)
+  );
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }}
+        style={{ background: T.surfaceAlt, border: `1px solid ${T.goldBorder}`, borderRadius: 18, padding: 24, maxWidth: 460, width: '100%', maxHeight: '88vh', overflowY: 'auto' }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: 20, color: T.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Crown style={{ width: 16, height: 16, color: T.gold }} /> New Tournament
+          </h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textMuted }}><X style={{ width: 16, height: 16 }} /></button>
+        </div>
+
+        {/* Size picker */}
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.textMuted, display: 'block', marginBottom: 8 }}>Tournament Size</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {[4, 8].map(s => (
+              <button key={s} onClick={() => setSize(s)} type="button" style={{ padding: '14px', borderRadius: 12, border: `1.5px solid ${size === s ? T.goldBorder : T.border}`, background: size === s ? T.goldDim : T.surfaceHigh, cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s' }}>
+                <Crown style={{ width: 18, height: 18, color: size === s ? T.gold : T.textMuted, margin: '0 auto 6px' }} />
+                <p style={{ fontSize: 16, fontWeight: 800, color: size === s ? T.gold : T.text, margin: 0 }}>{s} Players</p>
+                <p style={{ fontSize: 10, color: T.textMuted, margin: '4px 0 0' }}>{Math.log2(s)} rounds</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Title */}
+        <div style={{ marginBottom: 18 }}>
+          <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.textMuted, display: 'block', marginBottom: 6 }}>Title</label>
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Cash Clash Championship"
+            style={{ width: '100%', padding: '10px 12px', background: T.surface, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text, fontSize: 12, outline: 'none', boxSizing: 'border-box' }}
+            onFocus={e => e.currentTarget.style.borderColor = T.goldBorder}
+            onBlur={e => e.currentTarget.style.borderColor = T.border}
+          />
+        </div>
+
+        {/* Selected players */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.textMuted }}>
+              Players Selected
+            </label>
+            <span style={{ fontSize: 10, fontWeight: 700, color: selectedPlayers.length >= needed ? T.success : T.gold }}>
+              {selectedPlayers.length + 1}/{size}
+            </span>
+          </div>
+
+          {/* You (creator) always shown */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 99, background: T.goldDim, border: `1px solid ${T.goldBorder}` }}>
+              <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(184,151,58,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: T.gold }}>
+                {myProfile?.username?.[0]?.toUpperCase() || 'Y'}
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 700, color: T.gold }}>@{myProfile?.username} (you)</span>
+            </div>
+            {selectedPlayers.map(p => (
+              <div key={p.username} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 99, background: T.surfaceHigh, border: `1px solid ${T.border}` }}>
+                <div style={{ width: 20, height: 20, borderRadius: '50%', overflow: 'hidden', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: T.text, flexShrink: 0 }}>
+                  {p.custom_avatar_url
+                    ? <img src={p.custom_avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : (p.username?.[0]?.toUpperCase() || '?')}
+                </div>
+                <span style={{ fontSize: 11, color: T.text }}>@{p.username}</span>
+                <button onClick={() => removePlayer(p.username)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textMuted, padding: 0, display: 'flex', lineHeight: 1 }}>
+                  <X style={{ width: 11, height: 11 }} />
+                </button>
+              </div>
+            ))}
+            {Array.from({ length: needed - selectedPlayers.length }).map((_, i) => (
+              <div key={`empty-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 99, background: T.surface, border: `1px dashed ${T.border}` }}>
+                <span style={{ fontSize: 11, color: T.textDim }}>+ player</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Friends list */}
+        {availableFriends.length > 0 && selectedPlayers.length < needed && (
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.textMuted, display: 'block', marginBottom: 8 }}>Add from Friends</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 200, overflowY: 'auto', borderRadius: 10, border: `1px solid ${T.border}`, overflow: 'hidden' }}>
+              {availableFriends.map(fp => (
+                <button key={fp.id} onClick={() => addFriend(fp)} type="button"
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'none', border: 'none', borderBottom: `1px solid ${T.border}`, cursor: 'pointer', textAlign: 'left', transition: 'background 0.1s', width: '100%' }}
+                  onMouseEnter={e => e.currentTarget.style.background = T.surfaceHigh}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                >
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1.5px solid rgba(184,151,58,0.3)', background: 'rgba(184,151,58,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {fp.custom_avatar_url
+                      ? <img src={fp.custom_avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <span style={{ fontSize: 13, fontWeight: 700, color: T.gold }}>{(fp.display_name || fp.username || '?')[0].toUpperCase()}</span>}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: T.text, margin: 0 }}>{fp.display_name || fp.username}</p>
+                    <p style={{ fontSize: 10, color: T.textMuted, margin: 0 }}>@{fp.username} · Lv.{fp.level || 1}</p>
+                  </div>
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: T.goldDim, border: `1px solid ${T.goldBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Plus style={{ width: 11, height: 11, color: T.gold }} />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Manual username input */}
+        {selectedPlayers.length < needed && (
+          <div style={{ marginBottom: 18 }}>
+            <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.textMuted, display: 'block', marginBottom: 6 }}>Or Add by Username</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: T.textMuted, fontSize: 12 }}>@</span>
+                <input value={manualInput} onChange={e => setManualInput(e.target.value.replace('@', ''))}
+                  onKeyDown={e => e.key === 'Enter' && addManual()}
+                  placeholder="username"
+                  style={{ width: '100%', paddingLeft: 26, paddingRight: 12, paddingTop: 9, paddingBottom: 9, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 9, color: T.text, fontSize: 12, outline: 'none', boxSizing: 'border-box' }}
+                  onFocus={e => e.currentTarget.style.borderColor = T.goldBorder}
+                  onBlur={e => e.currentTarget.style.borderColor = T.border}
+                />
+              </div>
+              <button onClick={addManual} type="button" style={{ padding: '9px 14px', borderRadius: 9, background: T.goldDim, border: `1px solid ${T.goldBorder}`, color: T.gold, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                Add
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div style={{ padding: '10px 14px', borderRadius: 10, background: T.goldDim, border: `1px solid ${T.goldBorder}`, marginBottom: 18, fontSize: 11, color: T.gold, lineHeight: 1.55 }}>
+          <strong>How it works:</strong> Players are randomly seeded. Each match is a Challenge Rush — complete all tasks before your opponent. Winners advance until one player remains.
+        </div>
+
+        <button onClick={handleCreate} disabled={creating || selectedPlayers.length < needed} style={{
+          width: '100%', padding: '12px', borderRadius: 11, border: 'none',
+          cursor: (creating || selectedPlayers.length < needed) ? 'not-allowed' : 'pointer',
+          background: selectedPlayers.length >= needed ? `linear-gradient(135deg, ${T.gold}, ${T.goldLight})` : T.surfaceHigh,
+          color: selectedPlayers.length >= needed ? '#0C0C0E' : T.textMuted,
+          fontSize: 13, fontWeight: 800, opacity: creating ? 0.7 : 1,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s',
+        }}>
+          {creating
+            ? <div style={{ width: 14, height: 14, border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#0C0C0E', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+            : <Crown style={{ width: 14, height: 14 }} />}
+          {selectedPlayers.length >= needed ? 'Create Tournament' : `Select ${needed - selectedPlayers.length} more player${needed - selectedPlayers.length > 1 ? 's' : ''}`}
+        </button>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function Challenges() {
   const [user, setUser] = useState(null);
   const [myProfile, setMyProfile] = useState(null);
@@ -1482,7 +1882,8 @@ export default function Challenges() {
   const [form, setForm] = useState({ title: '', opponent_username: '', savings_goal: '' });
   const [searching, setSearching] = useState(false);
   const [showFriendPicker, setShowFriendPicker] = useState(false);
-  const [activeTab, setActiveTab] = useState('clashes'); // 'clashes' | 'review'
+  const [activeTab, setActiveTab] = useState('clashes'); // 'clashes' | 'review' | 'tournaments'
+  const [tournamentDialogOpen, setTournamentDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   const location = useLocation();
 
@@ -1506,6 +1907,18 @@ export default function Challenges() {
     enabled: !!user,
     initialData: [],
   });
+
+  const { data: tournaments = [] } = useQuery({
+    queryKey: ['tournaments'],
+    queryFn: () => entities.Tournament.list('-created_at', 30),
+    enabled: !!user,
+    initialData: [],
+  });
+
+  const myTournaments = tournaments.filter(t =>
+    t.created_by === user?.id ||
+    (t.participants || []).some(p => p.userId === user?.id)
+  );
 
   const { data: myFriends = [] } = useQuery({
     queryKey: ['friends', user?.id],
@@ -1622,6 +2035,12 @@ export default function Challenges() {
         proofUrl,
         submittedAt: new Date().toISOString(),
       }};
+      // Clear any prior denial so state resets to "in review"
+      if (t.denied_users?.[user.id]) {
+        const denied = { ...(t.denied_users || {}) };
+        delete denied[user.id];
+        t.denied_users = denied;
+      }
       tasks[taskIndex] = t;
       await entities.Challenge.update(challenge.id, { rush_tasks: tasks });
       queryClient.invalidateQueries({ queryKey: ['challenges'] });
@@ -1658,6 +2077,7 @@ export default function Challenges() {
           await entities.UserProfile.update(profile.id, {
             xp: newXP, level: newLevel,
             battles_won: (profile.battles_won || 0) + 1,
+            coins: (profile.coins || 0) + COIN_ACTIONS.WIN_CHALLENGE,
             badges,
           });
           queryClient.invalidateQueries({ queryKey: ['profile'] });
@@ -1668,9 +2088,18 @@ export default function Challenges() {
     queryClient.invalidateQueries({ queryKey: ['challenges'] });
 
     if (isWinner) {
-      toast.success('All tasks complete — +100 XP awarded!');
+      toast.success(`All tasks complete — +100 XP & +${COIN_ACTIONS.WIN_CHALLENGE} coins!`);
     } else {
-      toast.success(`Objective verified! ${myDoneCount}/${tasks.length} done`);
+      try {
+        const prof = await profilesApi.getByUserId(user.id);
+        if (prof) {
+          await entities.UserProfile.update(prof.id, {
+            coins: (prof.coins || 0) + COIN_ACTIONS.COMPLETE_TASK,
+          });
+          queryClient.invalidateQueries({ queryKey: ['profile'] });
+        }
+      } catch (e) { console.error('Coin award failed', e); }
+      toast.success(`Objective verified! ${myDoneCount}/${tasks.length} done (+${COIN_ACTIONS.COMPLETE_TASK} coins)`);
     }
   };
 
@@ -1699,8 +2128,8 @@ export default function Challenges() {
         sender_id: user.id,
         sender_username: myProfile?.username || 'carlos',
         type: 'clash_invite',
-        title: '✅ Proof Accepted',
-        body: `Your proof for "${t.text}" in "${challenge.title}" was approved! Task marked complete.`,
+        title: 'Proof Accepted',
+        body: `Your proof for "${t.text}" in "${challenge.title}" was approved and marked complete.`,
         read: false,
       });
     } catch(e) { /* silent */ }
@@ -1713,13 +2142,14 @@ export default function Challenges() {
   const handleOwnerReject = async (challenge, taskIndex, submitterUserId, reason) => {
     const tasks = [...(challenge.rush_tasks || [])];
     const t = { ...tasks[taskIndex] };
-    // Remove from pending_review and clear their proof
+    // Remove from pending_review and clear their proof, mark as denied with reason
     const pending = { ...(t.pending_review || {}) };
     delete pending[submitterUserId];
     t.pending_review = pending;
     const proofUrls = { ...(t.proof_urls || {}) };
     delete proofUrls[submitterUserId];
     t.proof_urls = proofUrls;
+    t.denied_users = { ...(t.denied_users || {}), [submitterUserId]: { reason, deniedAt: new Date().toISOString() } };
     tasks[taskIndex] = t;
 
     await entities.Challenge.update(challenge.id, { rush_tasks: tasks });
@@ -1731,7 +2161,7 @@ export default function Challenges() {
         sender_id: user.id,
         sender_username: myProfile?.username || 'carlos',
         type: 'clash_invite',
-        title: '❌ Proof Rejected',
+        title: 'Proof Rejected',
         body: `Your proof for "${t.text}" in "${challenge.title}" was rejected. Reason: ${reason}`,
         read: false,
       });
@@ -1739,6 +2169,77 @@ export default function Challenges() {
 
     queryClient.invalidateQueries({ queryKey: ['challenges'] });
     toast.success('Proof rejected — user notified via inbox.');
+  };
+
+  // ── Advance tournament bracket after a match is won ──────────────────────
+  const handleTournamentMatchWin = async (tournament, matchRef) => {
+    const bracket = tournament.bracket ? [...tournament.bracket.map(m => ({ ...m }))] : [];
+    const match = bracket.find(m => m.round === matchRef.round && m.match === matchRef.match);
+    if (!match || match.winner_id) return;
+
+    match.winner_id = user.id;
+    match.winner_username = myProfile?.username;
+    match.status = 'completed';
+
+    const rounds = Math.log2(tournament.size);
+    const nextRound = match.round + 1;
+
+    if (nextRound > rounds) {
+      // Tournament over — this player is champion
+      await entities.Tournament.update(tournament.id, {
+        bracket,
+        status: 'completed',
+        winner_id: user.id,
+        winner_username: myProfile?.username,
+      });
+      try {
+        const profile = await profilesApi.getByUserId(user.id);
+        if (profile) {
+          await entities.UserProfile.update(profile.id, {
+            xp: (profile.xp || 0) + 250,
+            tournament_wins: (profile.tournament_wins || 0) + 1,
+            coins: (profile.coins || 0) + COIN_ACTIONS.WIN_TOURNAMENT,
+          });
+          queryClient.invalidateQueries({ queryKey: ['profile'] });
+        }
+      } catch(e) {}
+      toast.success(`You won the tournament! +250 XP & +${COIN_ACTIONS.WIN_TOURNAMENT} coins!`);
+    } else {
+      // Seed next round
+      const nextMatchIndex = Math.ceil(match.match / 2);
+      let nextMatch = bracket.find(m => m.round === nextRound && m.match === nextMatchIndex);
+      if (!nextMatch) {
+        nextMatch = { round: nextRound, match: nextMatchIndex, p1_id: null, p1_username: null, p2_id: null, p2_username: null, winner_id: null, winner_username: null, status: 'pending', tasks: generateRushTasks() };
+        bracket.push(nextMatch);
+      }
+      if (match.match % 2 === 1) {
+        nextMatch.p1_id = user.id;
+        nextMatch.p1_username = myProfile?.username;
+      } else {
+        nextMatch.p2_id = user.id;
+        nextMatch.p2_username = myProfile?.username;
+      }
+      // If both slots filled, notify both
+      if (nextMatch.p1_id && nextMatch.p2_id) {
+        nextMatch.status = 'active';
+        for (const pid of [nextMatch.p1_id, nextMatch.p2_id]) {
+          if (pid !== user.id) {
+            await notificationsApi.send({
+              recipient_id: pid,
+              sender_id: user.id,
+              sender_username: myProfile?.username,
+              type: 'clash_invite',
+              title: 'Next Tournament Match',
+              body: `Your next match in "${tournament.title}" is ready! You vs @${pid === nextMatch.p1_id ? nextMatch.p2_username : nextMatch.p1_username}.`,
+              read: false,
+            }).catch(() => {});
+          }
+        }
+      }
+      await entities.Tournament.update(tournament.id, { bracket });
+      toast.success(`Round ${match.round} won! Advancing to Round ${nextRound}.`);
+    }
+    queryClient.invalidateQueries({ queryKey: ['tournaments'] });
   };
 
   const getStatusBadge = (status) => {
@@ -2010,7 +2511,7 @@ export default function Challenges() {
               color: T.text, margin: 0,
               display: 'flex', alignItems: 'center', gap: 10,
             }}>
-              <Swords style={{ width: 22, height: 22, color: T.gold }} /> 1v1 Clash
+              <Swords style={{ width: 22, height: 22, color: T.gold }} /> Clash
             </h1>
             <p style={{ fontSize: 12, color: T.textMuted, marginTop: 4 }}>
               Challenge friends to savings battles or challenge rushes
@@ -2193,8 +2694,8 @@ export default function Challenges() {
         {/* ── HOW IT WORKS ── */}
         <HowItWorks open={howOpen} onClose={() => setHowOpen(false)} />
 
-        {/* ── OWNER TAB SWITCHER (carlos only) ── */}
-        {isCarlos && (() => {
+        {/* ── TAB SWITCHER ── */}
+        {(() => {
           // Count pending proofs for badge
           let pendingCount = 0;
           challenges.forEach(ch => {
@@ -2206,7 +2707,8 @@ export default function Challenges() {
             <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: `1px solid ${T.border}`, paddingBottom: 0 }}>
               {[
                 { key: 'clashes', label: 'My Clashes', Icon: Swords },
-                { key: 'review',  label: 'Proof Review', Icon: ShieldCheck, badge: pendingCount },
+                ...(isCarlos ? [{ key: 'review', label: 'Proof Review', Icon: ShieldCheck, badge: pendingCount }] : []),
+                { key: 'tournaments', label: 'Tournaments', Icon: Crown, badge: myTournaments.filter(t => t.status !== 'completed').length },
               ].map(({ key, label, Icon, badge }) => (
                 <button
                   key={key}
@@ -2239,6 +2741,77 @@ export default function Challenges() {
         })()}
 
         {/* ── OWNER REVIEW PANEL ── */}
+        {activeTab === 'tournaments' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* Active tournament brackets pinned at top */}
+            {myTournaments.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: T.textMuted }}>
+                <Crown style={{ width: 40, height: 40, margin: '0 auto 16px', opacity: 0.15 }} />
+                <p style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 6 }}>No Tournaments Yet</p>
+                <p style={{ fontSize: 12, marginBottom: 20 }}>Create a 4 or 8-player tournament to compete in bracket-style Challenge Rush.</p>
+                <button onClick={() => setTournamentDialogOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 20px', borderRadius: 10, background: `linear-gradient(135deg, ${T.gold}, ${T.goldLight})`, border: 'none', color: '#0C0C0E', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  <Crown style={{ width: 13, height: 13 }} /> Create Tournament
+                </button>
+              </div>
+            ) : (
+              myTournaments.map(t => {
+                const myMatch = (t.bracket || []).find(m =>
+                  m.status === 'active' && (m.p1_id === user?.id || m.p2_id === user?.id)
+                );
+                return (
+                  <div key={t.id}>
+                    <TournamentBracket tournament={t} participants={t.participants || []} currentUserId={user?.id} />
+                    {myMatch && (
+                      <div style={{ background: T.goldDim, border: `1px solid ${T.goldBorder}`, borderRadius: 12, padding: '14px 16px', marginTop: -12, marginBottom: 16 }}>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: T.gold, margin: '0 0 8px' }}>Your Current Match</p>
+                        <p style={{ fontSize: 11, color: T.textMuted, margin: '0 0 10px' }}>
+                          vs @{myMatch.p1_id === user?.id ? myMatch.p2_username : myMatch.p1_username}
+                        </p>
+                        <RushTaskList
+                          tasks={myMatch.tasks || []}
+                          myId={user?.id}
+                          challengeId={`tournament_${t.id}_r${myMatch.round}_m${myMatch.match}`}
+                          isActive={true}
+                          onTaskComplete={async (task, idx, proofUrl) => {
+                            const updatedTasks = [...(myMatch.tasks || [])];
+                            const ut = { ...updatedTasks[idx] };
+                            if (task.completionType === 'photo' && proofUrl) {
+                              ut.proof_urls = { ...(ut.proof_urls || {}), [user.id]: proofUrl };
+                              ut.pending_review = { ...(ut.pending_review || {}), [user.id]: { userId: user.id, username: myProfile?.username, proofUrl, submittedAt: new Date().toISOString() } };
+                              updatedTasks[idx] = ut;
+                            } else {
+                              ut.completed_by = [...new Set([...(ut.completed_by || []), user.id])];
+                              updatedTasks[idx] = ut;
+                            }
+                            const allDone = updatedTasks.filter(tk => (tk.completed_by || []).includes(user.id)).length === updatedTasks.length;
+                            const newBracket = (t.bracket || []).map(m => m.round === myMatch.round && m.match === myMatch.match ? { ...m, tasks: updatedTasks } : m);
+                            await entities.Tournament.update(t.id, { bracket: newBracket });
+                            queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+                            if (allDone) handleTournamentMatchWin(t, myMatch);
+                            else {
+                              try {
+                                const prof = await profilesApi.getByUserId(user.id);
+                                if (prof) {
+                                  await entities.UserProfile.update(prof.id, {
+                                    coins: (prof.coins || 0) + COIN_ACTIONS.COMPLETE_TASK,
+                                  });
+                                  queryClient.invalidateQueries({ queryKey: ['profile'] });
+                                }
+                              } catch (e) {}
+                              toast.success(`Task done! ${updatedTasks.filter(tk => (tk.completed_by || []).includes(user.id)).length}/${updatedTasks.length} complete (+${COIN_ACTIONS.COMPLETE_TASK} coins)`);
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+
+          </div>
+        )}
+
         {isCarlos && activeTab === 'review' && (
           <OwnerProofReviewTab
             challenges={challenges}
@@ -2247,7 +2820,7 @@ export default function Challenges() {
           />
         )}
 
-        {isCarlos && activeTab === 'review' ? null : (<>
+        {(activeTab === 'review' || activeTab === 'tournaments') ? null : (<>
 
         {/* ── STATS ROW ── */}
         {myChallenges.length > 0 && (
@@ -2315,6 +2888,19 @@ export default function Challenges() {
         </div>
         </>)}
       </div>
+
+      <CreateTournamentDialog
+        open={tournamentDialogOpen}
+        onClose={() => setTournamentDialogOpen(false)}
+        user={user}
+        myProfile={myProfile}
+        friendProfiles={friendProfiles}
+        onCreated={() => {
+          queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+          setTournamentDialogOpen(false);
+          setActiveTab('tournaments');
+        }}
+      />
     </div>
   );
 }

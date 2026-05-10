@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
-import { notificationsApi } from '@/api/supabaseClient';
+import React, { useEffect, useState } from 'react';
+import { notificationsApi, supabase } from '@/api/supabaseClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Users, Swords, Trophy, Star, CheckCheck, Zap } from 'lucide-react';
+import { Bell, Users, Swords, Trophy, Star, CheckCheck, Zap, Shield } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -27,6 +27,8 @@ const NOTIF_CONFIG = {
   friend_request:    { icon: Users,  color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
   friend_accepted:   { icon: Users,  color: '#22c55e', bg: 'rgba(34,197,94,0.1)' },
   clash_invite:      { icon: Swords, color: T.gold,    bg: T.goldDim },
+  clan_invite:       { icon: Shield, color: T.gold,    bg: T.goldDim },
+  clan_invite:       { icon: Users,  color: T.gold,    bg: T.goldDim },
   tournament_invite: { icon: Trophy, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
   level_up:          { icon: Zap,    color: '#eab308', bg: 'rgba(234,179,8,0.1)' },
   badge_earned:      { icon: Star,   color: '#a855f7', bg: 'rgba(168,85,247,0.1)' },
@@ -36,6 +38,8 @@ const NOTIF_ROUTES = {
   friend_request:    '/Friends',
   friend_accepted:   '/Friends',
   clash_invite:      '/Challenges',
+  clan_invite:       '/Clans',
+  clan_invite:       '/Clans',
   tournament_invite: '/Challenges',
   level_up:          '/Dashboard',
   badge_earned:      '/Badges',
@@ -45,6 +49,37 @@ export default function Inbox() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  // clan-invite-v2
+  const { data: clanInvites = [] } = useQuery({
+    queryKey: ['inbox-clan-invites', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('clan_join_requests')
+        .select('*, clan:clans(*)')
+        .eq('user_id', user.id).eq('status', 'invited')
+        .order('created_at', { ascending: false });
+      return data || [];
+    },
+    enabled: !!user?.id,
+    refetchInterval: 15000,
+  });
+
+  const handleClanInviteAccept = async (invite) => {
+    const { error } = await supabase.from('clan_members')
+      .insert({ clan_id: invite.clan_id, user_id: user.id, role: 'member' });
+    if (error && error.code !== '23505') { alert('Failed: ' + error.message); return; }
+    await supabase.from('clan_join_requests').update({ status: 'accepted' }).eq('id', invite.id);
+    queryClient.invalidateQueries({ queryKey: ['inbox-clan-invites', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['clan-invite', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['my-clan-membership', user?.id] });
+    navigate('/Clans');
+  };
+
+  const handleClanInviteDecline = async (invite) => {
+    await supabase.from('clan_join_requests').update({ status: 'rejected' }).eq('id', invite.id);
+    queryClient.invalidateQueries({ queryKey: ['inbox-clan-invites', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['clan-invite', user?.id] });
+  };
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['notifications', user?.id],
@@ -69,6 +104,23 @@ export default function Inbox() {
     }
     const dest = NOTIF_ROUTES[notif.type];
     if (dest) navigate(dest);
+  };
+
+  // clan-invite-fixed
+  const handleClanInviteAction = async (notif, accept) => {
+    if (accept) {
+      const { error } = await supabase.from('clan_members')
+        .insert({ clan_id: notif.related_id, user_id: user.id, role: 'member' });
+      if (error && error.code !== '23505') {
+        alert('Failed to join clan: ' + error.message); return;
+      }
+    }
+    await notificationsApi.markRead(notif.id);
+    queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['notif-count'] });
+    queryClient.invalidateQueries({ queryKey: ['my-clan-membership', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['clan-invite', user?.id] });
+    if (accept) navigate('/Clans');
   };
 
   return (
@@ -103,6 +155,39 @@ export default function Inbox() {
           <p style={{ fontSize: 14, color: T.textMuted }}>Your notifications, invites and activity</p>
         </motion.div>
 
+        {/* CLAN INVITES */}
+        {clanInvites.map((invite, i) => (
+          <motion.div key={invite.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}>
+            <Card style={{ background: T.surfaceAlt, border: `1px solid ${T.goldBorder}` }}>
+              <CardContent className="flex items-start gap-4 p-4">
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: T.goldDim, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 20 }}>
+                  {invite.clan?.avatar_emoji || '🛡️'}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: T.text, margin: 0 }}>Clan Invitation</p>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: T.gold }} />
+                  </div>
+                  <p style={{ fontSize: 13, color: T.textMuted, margin: '2px 0 0' }}>
+                    You've been invited to join <strong style={{ color: T.gold }}>{invite.clan?.name || 'a clan'}</strong>
+                  </p>
+                  {invite.clan?.bio && <p style={{ fontSize: 11, color: T.textDim, margin: '2px 0 0' }}>{invite.clan.bio}</p>}
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    <button onClick={() => handleClanInviteAccept(invite)}
+                      style={{ background: T.gold, border: 'none', borderRadius: 8, padding: '7px 18px', color: '#111', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                      ✓ Accept
+                    </button>
+                    <button onClick={() => handleClanInviteDecline(invite)}
+                      style={{ background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 8, padding: '7px 18px', color: T.textMuted, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                      ✗ Decline
+                    </button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+
         {/* CONTENT */}
         {notifications.length === 0 ? (
           <div style={{ padding: '80px 0', textAlign: 'center', color: T.textDim }}>
@@ -125,13 +210,13 @@ export default function Inbox() {
                 >
                   <Card
                     style={{
-                      cursor: 'pointer',
+                      cursor: notif.type === 'clan_invite' ? 'default' : 'pointer',
                       background: isUnread ? T.surfaceAlt : 'transparent',
                       border: `1px solid ${isUnread ? T.goldBorder : T.border}`,
                       transition: 'all 0.2s ease',
                     }}
-                    className="hover:scale-[1.01]"
-                    onClick={() => handleMarkOne(notif)}
+                    className={notif.type !== 'clan_invite' ? 'hover:scale-[1.01]' : ''}
+                    onClick={notif.type !== 'clan_invite' ? () => handleMarkOne(notif) : undefined}
                   >
                     <CardContent className="flex items-start gap-4 p-4">
                       <div style={{ 
@@ -166,6 +251,18 @@ export default function Inbox() {
                         <p style={{ fontSize: 10, color: T.textDim, marginTop: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                           {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
                         </p>
+                        {notif.type === 'clan_invite' && isUnread && (
+                          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                            <button
+                              onClick={() => handleClanInviteAction(notif, true)}
+                              style={{ background: T.gold, border: 'none', borderRadius: 8, padding: '7px 18px', color: '#111', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                            >✓ Accept</button>
+                            <button
+                              onClick={() => handleClanInviteAction(notif, false)}
+                              style={{ background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 8, padding: '7px 18px', color: T.textMuted, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                            >✗ Decline</button>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

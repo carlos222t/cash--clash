@@ -112,6 +112,8 @@ export default function Friends() {
     finally { setIsSearching(false); }
   };
 
+  const [sentRequests, setSentRequests] = React.useState(new Set());
+
   const handleAddFriend = async (targetProfile) => {
     try {
       const rel = await friendsApi.getRelationship(user.id, targetProfile.created_by);
@@ -126,6 +128,7 @@ export default function Friends() {
         body: `@${myProfile?.username || 'Someone'} sent you a friend request!`,
         read: false,
       });
+      setSentRequests(prev => new Set([...prev, targetProfile.created_by]));
       queryClient.invalidateQueries({ queryKey: ['friends'] });
       toast.success(`Friend request sent to @${targetProfile.username}!`);
     } catch (err) {
@@ -227,14 +230,23 @@ export default function Friends() {
                         <Badge style={{ background: T.goldDim, color: T.gold, border: `1px solid ${T.goldBorder}` }} className="text-xs">Lv {profile.level || 1}</Badge>
                       </div>
                     </button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => handleAddFriend(profile)} 
-                      style={{ border: `1px solid ${T.goldBorder}`, color: T.gold }}
-                      className="gap-1 flex-shrink-0 hover:bg-goldDim"
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => !sentRequests.has(profile.created_by) && handleAddFriend(profile)}
+                      disabled={sentRequests.has(profile.created_by)}
+                      style={{
+                        border: `1px solid ${sentRequests.has(profile.created_by) ? 'rgba(184,151,58,0.3)' : T.goldBorder}`,
+                        color: sentRequests.has(profile.created_by) ? T.gold : T.gold,
+                        background: sentRequests.has(profile.created_by) ? 'rgba(184,151,58,0.1)' : 'transparent',
+                        opacity: 1, cursor: sentRequests.has(profile.created_by) ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      className="gap-1 flex-shrink-0"
                     >
-                      <UserPlus className="w-3.5 h-3.5" /> Add
+                      {sentRequests.has(profile.created_by)
+                        ? <><UserCheck className="w-3.5 h-3.5" /> Requested</>
+                        : <><UserPlus className="w-3.5 h-3.5" /> Add</>}
                     </Button>
                   </div>
                 ))}
@@ -313,7 +325,7 @@ export default function Friends() {
                       <Button size="sm" onClick={() => handleAccept(req)} style={{ background: T.gold, color: '#000' }} className="gap-1">
                         <UserCheck className="w-3.5 h-3.5" /> Accept
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleDecline(req)} style={{ border: `1px solid ${T.border}`, color: T.text }} className="gap-1">
+                      <Button size="sm" variant="outline" onClick={() => handleDecline(req)} style={{ border: '1px solid rgba(192,102,90,0.35)', color: '#C0665A', background: 'rgba(192,102,90,0.08)' }} className="gap-1">
                         <UserX className="w-3.5 h-3.5" /> Decline
                       </Button>
                     </div>

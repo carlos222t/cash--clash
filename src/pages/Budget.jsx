@@ -119,10 +119,17 @@ export default function Budget() {
     const txCount = transactions.length + 1;
     if (txCount === 1  && !badges.includes('first_track')) badges.push('first_track');
     if (txCount >= 10  && !badges.includes('penny_wise'))  badges.push('penny_wise');
-    await entities.UserProfile.update(p.id, { xp: newXP, badges });
+    const levelUps = countLevelUps(p.xp || 0, newXP);
+    const newLevel  = getLevelFromXP(newXP);
+    const levelUpCoins = levelUps * COIN_ACTIONS.LEVEL_UP;
+    await entities.UserProfile.update(p.id, {
+      xp: newXP, level: newLevel, badges,
+      ...(levelUpCoins > 0 ? { coins: (p.coins || 0) + levelUpCoins } : {}),
+    });
     queryClient.invalidateQueries({ queryKey: ['transactions'] });
     queryClient.invalidateQueries({ queryKey: ['profile'] });
-    toast.success(`+${XP_ACTIONS.LOG_TRANSACTION} XP earned!`);
+    if (levelUps > 0) toast.success(`🎉 Level up! You reached level ${newLevel} — +${levelUpCoins} coins!`);
+    else toast.success(`+${XP_ACTIONS.LOG_TRANSACTION} XP earned!`);
     setShowForm(false);
   };
 
@@ -139,7 +146,14 @@ export default function Budget() {
     if (newTotalSaved >= 100  && !badges.includes('savings_starter')) badges.push('savings_starter');
     if (newTotalSaved >= 500  && !badges.includes('savings_pro'))     badges.push('savings_pro');
     if (newTotalSaved >= 2000 && !badges.includes('savings_legend'))  badges.push('savings_legend');
-    await entities.UserProfile.update(p.id, { xp: newXP, badges, total_saved: newTotalSaved });
+    const levelUps2     = countLevelUps(p.xp || 0, newXP);
+    const newLevel2     = getLevelFromXP(newXP);
+    const levelUpCoins2 = levelUps2 * COIN_ACTIONS.LEVEL_UP;
+    await entities.UserProfile.update(p.id, {
+      xp: newXP, level: newLevel2, badges, total_saved: newTotalSaved,
+      ...(levelUpCoins2 > 0 ? { coins: (p.coins || 0) + levelUpCoins2 } : {}),
+    });
+    if (levelUps2 > 0) toast.success(`🎉 Level up! You reached level ${newLevel2} — +${levelUpCoins2} coins!`);
     try {
       const { data: activeChallenges } = await supabase
         .from('challenges')

@@ -1,0 +1,780 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { auth, entities, profilesApi, supabase } from '@/api/supabaseClient';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
+import {
+  User, Palette, Image, Type, Check, Camera, Sparkles, Eye,
+  RotateCcw, Save, ChevronRight, Paintbrush, X,
+} from 'lucide-react';
+
+/* ── Design tokens (matches app theme) ── */
+const T = {
+  dark:        '#0C0C0E',
+  surface:     '#111114',
+  surfaceAlt:  '#16161A',
+  surfaceHigh: '#1C1C22',
+  gold:        '#B8973A',
+  goldLight:   '#D4AF5A',
+  goldDim:     'rgba(184,151,58,0.12)',
+  goldBorder:  'rgba(184,151,58,0.28)',
+  border:      'rgba(255,255,255,0.07)',
+  text:        '#F0EDE6',
+  textMuted:   'rgba(240,237,230,0.45)',
+  textDim:     'rgba(240,237,230,0.22)',
+  danger:      '#C0392B',
+  dangerDim:   'rgba(192,57,43,0.12)',
+  success:     '#7EB88A',
+  successDim:  'rgba(126,184,138,0.12)',
+};
+
+const AVATAR_PRESETS = {
+  avatar1:'🦁', avatar2:'🐯', avatar3:'🦊', avatar4:'🐺', avatar5:'🦅',
+  avatar6:'🐉', avatar7:'🦄', avatar8:'🐻', avatar9:'🦈', avatar10:'🍆',
+  avatar11:'🐸', avatar12:'🦉',
+};
+
+const PROFILE_COLORS = [
+  { id: 'gold',    label: 'Gold',      bg: 'linear-gradient(135deg, #B8973A, #D4AF5A)', accent: '#B8973A' },
+  { id: 'ember',   label: 'Ember',     bg: 'linear-gradient(135deg, #C0392B, #E74C3C)', accent: '#C0392B' },
+  { id: 'ocean',   label: 'Ocean',     bg: 'linear-gradient(135deg, #1a6b9a, #5B9BD5)', accent: '#5B9BD5' },
+  { id: 'forest',  label: 'Forest',    bg: 'linear-gradient(135deg, #27774A, #7EB88A)', accent: '#7EB88A' },
+  { id: 'violet',  label: 'Violet',    bg: 'linear-gradient(135deg, #6C3483, #A569BD)', accent: '#A569BD' },
+  { id: 'rose',    label: 'Rose',      bg: 'linear-gradient(135deg, #9B2335, #E8748A)', accent: '#E8748A' },
+  { id: 'slate',   label: 'Slate',     bg: 'linear-gradient(135deg, #2C3E50, #596980)', accent: '#596980' },
+  { id: 'copper',  label: 'Copper',    bg: 'linear-gradient(135deg, #7D4F30, #C07840)', accent: '#C07840' },
+  { id: 'ice',     label: 'Ice',       bg: 'linear-gradient(135deg, #2980B9, #AED6F1)', accent: '#AED6F1' },
+  { id: 'onyx',    label: 'Onyx',      bg: 'linear-gradient(135deg, #1a1a1f, #3a3a44)', accent: '#888' },
+];
+
+const getColorById = (id) => PROFILE_COLORS.find(c => c.id === id) || PROFILE_COLORS[0];
+
+/* ── UI Color Options ── */
+const CARD_BG_COLORS = [
+  { id: 'default', label: 'Default',  bg: '#FFFFFF',                  preview: '#FFFFFF' },
+  { id: 'cream',   label: 'Cream',    bg: '#FFF8F0',                  preview: '#FFF8F0' },
+  { id: 'slate',   label: 'Slate',    bg: '#F1F5F9',                  preview: '#F1F5F9' },
+  { id: 'blush',   label: 'Blush',    bg: '#FFF0F3',                  preview: '#FFF0F3' },
+  { id: 'mint',    label: 'Mint',     bg: '#F0FFF4',                  preview: '#F0FFF4' },
+  { id: 'lavender',label: 'Lavender', bg: '#F5F0FF',                  preview: '#F5F0FF' },
+  { id: 'charcoal',label: 'Charcoal', bg: '#1C1C22',                  preview: '#1C1C22' },
+  { id: 'navy',    label: 'Navy',     bg: '#0F1C2E',                  preview: '#0F1C2E' },
+];
+
+const CHALLENGE_BTN_COLORS = [
+  { id: 'green',   label: 'Green',   bg: '#22C55E', text: '#fff' },
+  { id: 'gold',    label: 'Gold',    bg: '#B8973A', text: '#fff' },
+  { id: 'ember',   label: 'Ember',   bg: '#E74C3C', text: '#fff' },
+  { id: 'ocean',   label: 'Ocean',   bg: '#3B82F6', text: '#fff' },
+  { id: 'violet',  label: 'Violet',  bg: '#8B5CF6', text: '#fff' },
+  { id: 'rose',    label: 'Rose',    bg: '#E8748A', text: '#fff' },
+  { id: 'onyx',    label: 'Onyx',    bg: '#2C2C35', text: '#fff' },
+  { id: 'white',   label: 'White',   bg: '#FFFFFF', text: '#111' },
+];
+
+const FRIEND_BTN_COLORS = [
+  { id: 'default', label: 'Default', bg: '#F3F4F6', text: '#374151' },
+  { id: 'gold',    label: 'Gold',    bg: '#B8973A', text: '#fff'    },
+  { id: 'ocean',   label: 'Ocean',   bg: '#3B82F6', text: '#fff'    },
+  { id: 'forest',  label: 'Forest',  bg: '#22C55E', text: '#fff'    },
+  { id: 'violet',  label: 'Violet',  bg: '#8B5CF6', text: '#fff'    },
+  { id: 'rose',    label: 'Rose',    bg: '#E8748A', text: '#fff'    },
+  { id: 'slate',   label: 'Slate',   bg: '#64748B', text: '#fff'    },
+  { id: 'onyx',    label: 'Onyx',    bg: '#2C2C35', text: '#fff'    },
+];
+
+const STAT_CARD_COLORS = [
+  { id: 'default', label: 'Default', bg: '#F9F5EB', border: 'rgba(184,151,58,0.15)', icon: '#B8973A' },
+  { id: 'ocean',   label: 'Ocean',   bg: '#EFF6FF', border: 'rgba(59,130,246,0.2)',  icon: '#3B82F6' },
+  { id: 'forest',  label: 'Forest',  bg: '#F0FDF4', border: 'rgba(34,197,94,0.2)',   icon: '#22C55E' },
+  { id: 'violet',  label: 'Violet',  bg: '#F5F3FF', border: 'rgba(139,92,246,0.2)',  icon: '#8B5CF6' },
+  { id: 'rose',    label: 'Rose',    bg: '#FFF1F2', border: 'rgba(232,116,138,0.2)', icon: '#E8748A' },
+  { id: 'ember',   label: 'Ember',   bg: '#FFF5F5', border: 'rgba(231,76,60,0.2)',   icon: '#E74C3C' },
+  { id: 'dark',    label: 'Dark',    bg: '#1C1C22', border: 'rgba(255,255,255,0.08)',icon: '#B8973A' },
+  { id: 'copper',  label: 'Copper',  bg: '#FFF7ED', border: 'rgba(192,120,64,0.2)',  icon: '#C07840' },
+];
+
+const getCardBg      = (id) => CARD_BG_COLORS.find(c => c.id === id)      || CARD_BG_COLORS[0];
+const getChallBtn    = (id) => CHALLENGE_BTN_COLORS.find(c => c.id === id) || CHALLENGE_BTN_COLORS[0];
+const getFriendBtn   = (id) => FRIEND_BTN_COLORS.find(c => c.id === id)   || FRIEND_BTN_COLORS[0];
+const getStatCard    = (id) => STAT_CARD_COLORS.find(c => c.id === id)     || STAT_CARD_COLORS[0];
+
+/* ── Live Profile Card Preview ─────────────────────────────────────────── */
+function ProfilePreview({ displayName, username, bio, avatarEmoji, avatarUrl, colorId, level, xp, cardBgColor, challengeBtnColor, friendBtnColor, statCardColor }) {
+  const color     = getColorById(colorId);
+  const cardBg    = getCardBg(cardBgColor);
+  const challBtn  = getChallBtn(challengeBtnColor);
+  const friendBtn = getFriendBtn(friendBtnColor);
+  const statCard  = getStatCard(statCardColor);
+
+  const isDarkCard = ['charcoal','navy','dark'].includes(cardBgColor);
+  const textColor  = isDarkCard ? '#F0EDE6'       : '#111827';
+  const subColor   = isDarkCard ? 'rgba(240,237,230,0.55)' : '#6B7280';
+  return (
+    <div style={{
+      borderRadius: 18,
+      overflow: 'hidden',
+      border: `1px solid ${T.border}`,
+      background: cardBg.bg,
+      boxShadow: `0 0 40px rgba(0,0,0,0.5)`,
+      maxWidth: 320,
+      width: '100%',
+    }}>
+      {/* Banner */}
+      <div style={{
+        height: 90,
+        background: color.bg,
+        position: 'relative',
+      }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.04\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+        }} />
+        {/* Level badge */}
+        <div style={{
+          position: 'absolute', top: 10, right: 12,
+          padding: '3px 8px', borderRadius: 99,
+          background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(8px)',
+          fontSize: 10, fontWeight: 800, color: '#fff',
+          letterSpacing: '0.06em',
+        }}>
+          LV.{level || 1}
+        </div>
+      </div>
+
+      {/* Avatar overlapping banner */}
+      <div style={{ padding: '0 18px 18px', position: 'relative' }}>
+        <div style={{
+          width: 64, height: 64,
+          borderRadius: '50%',
+          border: `3px solid ${T.surfaceAlt}`,
+          background: `${color.accent}22`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          marginTop: -32,
+          overflow: 'hidden',
+          boxShadow: `0 0 0 2px ${color.accent}55`,
+        }}>
+          {avatarUrl
+            ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <span style={{ fontSize: 30 }}>{avatarEmoji || '🦁'}</span>}
+        </div>
+
+        <div style={{ marginTop: 10 }}>
+          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: 20, color: textColor, margin: 0, lineHeight: 1.2 }}>
+            {displayName || 'Your Name'}
+          </p>
+          <p style={{ fontSize: 11, color: subColor, margin: '2px 0 0' }}>@{username || 'username'}</p>
+          {bio && (
+            <p style={{ fontSize: 11, color: subColor, margin: '8px 0 0', lineHeight: 1.55, borderTop: `1px solid rgba(0,0,0,0.08)`, paddingTop: 8 }}>
+              {bio}
+            </p>
+          )}
+        </div>
+
+        {/* XP bar */}
+        <div style={{ marginTop: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: subColor, marginBottom: 4 }}>
+            <span style={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}>XP</span>
+            <span>{xp || 0}</span>
+          </div>
+          <div style={{ height: 3, background: 'rgba(0,0,0,0.1)', borderRadius: 99, overflow: 'hidden' }}>
+            <div style={{ width: `${Math.min(100, ((xp || 0) % 500) / 5)}%`, height: '100%', background: color.bg, borderRadius: 99, transition: 'width 0.4s' }} />
+          </div>
+        </div>
+
+        {/* Stat cards preview */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginTop: 12 }}>
+          {[
+            { label: 'Level', value: level || 1, icon: (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <polygon points="13,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill="#FACC15" stroke="#F59E0B" strokeWidth="1.5"/>
+              </svg>
+            )},
+            { label: 'XP', value: xp || 0, icon: (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" fill="#4ADE80" stroke="#16A34A" strokeWidth="1.5"/>
+                <text x="12" y="16" textAnchor="middle" fontSize="11" fontWeight="bold" fill="white">$</text>
+              </svg>
+            )},
+            { label: 'Battles Won', value: 0, icon: (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M14.5 2H9.5L7 6H4l1 4h1.5l1 3h9l1-3H19l1-4h-3L14.5 2z" fill="#F87171" stroke="#EF4444" strokeWidth="1.2"/>
+                <path d="M9 13l1.5 5h3L15 13" fill="#FCA5A5" stroke="none"/>
+                <rect x="11" y="18" width="2" height="3" rx="1" fill="#EF4444"/>
+              </svg>
+            )},
+          ].map(s => (
+            <div key={s.label} style={{
+              background: cardBg.bg, border: '1px solid rgba(0,0,0,0.08)',
+              borderRadius: 10, padding: '8px 4px', textAlign: 'center',
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+            }}>
+              <span style={{ display: 'flex', justifyContent: 'center' }}>{s.icon}</span>
+              <p style={{ fontWeight: 700, fontSize: 12, color: textColor, margin: '2px 0 0' }}>{s.value}</p>
+              <p style={{ fontSize: 9, color: subColor, margin: 0 }}>{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Action buttons preview */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <div style={{
+            flex: 1, padding: '8px', borderRadius: 10, textAlign: 'center',
+            background: friendBtn.bg, color: friendBtn.text, fontSize: 11, fontWeight: 600,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+          }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="8" r="4" fill="currentColor"/>
+              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            Friends
+          </div>
+          <div style={{
+            flex: 1.5, padding: '8px', borderRadius: 10, textAlign: 'center',
+            background: challBtn.bg, color: challBtn.text, fontSize: 11, fontWeight: 600,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+          }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <path d="M14.5 2H9.5L7 6H4l1 4h1.5l1 3h9l1-3H19l1-4h-3L14.5 2z" fill="currentColor"/>
+            </svg>
+            Challenge
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Section wrapper ───────────────────────────────────────────────────── */
+function Section({ icon: Icon, title, children }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={{
+        background: T.surfaceAlt,
+        border: `1px solid ${T.border}`,
+        borderRadius: 16,
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '14px 18px',
+        borderBottom: `1px solid ${T.border}`,
+        background: 'rgba(255,255,255,0.015)',
+      }}>
+        <Icon style={{ width: 14, height: 14, color: T.gold }} />
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.textMuted }}>
+          {title}
+        </span>
+      </div>
+      <div style={{ padding: 18 }}>
+        {children}
+      </div>
+    </motion.div>
+  );
+}
+
+/* ── Input ─────────────────────────────────────────────────────────────── */
+function Field({ label, hint, children }) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.textMuted, display: 'block', marginBottom: 6 }}>
+        {label}
+      </label>
+      {children}
+      {hint && <p style={{ fontSize: 10, color: T.textDim, marginTop: 5 }}>{hint}</p>}
+    </div>
+  );
+}
+
+function TextInput({ value, onChange, placeholder, maxLength, multiline }) {
+  const style = {
+    width: '100%', padding: '10px 12px',
+    background: T.surface, border: `1px solid ${T.border}`,
+    borderRadius: 9, color: T.text, fontSize: 12,
+    outline: 'none', boxSizing: 'border-box',
+    fontFamily: "'DM Sans', sans-serif",
+    resize: multiline ? 'vertical' : 'none',
+    minHeight: multiline ? 80 : undefined,
+    transition: 'border-color 0.15s',
+  };
+  const handlers = {
+    onFocus: e => e.currentTarget.style.borderColor = T.goldBorder,
+    onBlur:  e => e.currentTarget.style.borderColor = T.border,
+  };
+  return multiline
+    ? <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength} style={style} {...handlers} rows={3} />
+    : <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength} style={style} {...handlers} />;
+}
+
+/* ── Main Page ─────────────────────────────────────────────────────────── */
+export default function Customize() {
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const fileRef = useRef(null);
+  const queryClient = useQueryClient();
+
+  // Editable fields
+  const [displayName, setDisplayName] = useState('');
+  const [bio, setBio] = useState('');
+  const [avatarEmoji, setAvatarEmoji] = useState('avatar1');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [colorId, setColorId] = useState('gold');
+  const [cardBgColor, setCardBgColor] = useState('default');
+  const [challengeBtnColor, setChallengeBtnColor] = useState('green');
+  const [friendBtnColor, setFriendBtnColor] = useState('default');
+
+  useEffect(() => {
+    auth.me().then(u => {
+      setUser(u);
+      profilesApi.getByUserId(u.id).then(p => {
+        if (p) {
+          setProfile(p);
+          setDisplayName(p.display_name || '');
+          setBio(p.bio || '');
+          setAvatarEmoji(p.avatar_id || 'avatar1');
+          setAvatarUrl(p.custom_avatar_url || '');
+          setColorId(p.banner_color || 'gold');
+          setCardBgColor(p.card_bg_color || 'default');
+          setChallengeBtnColor(p.challenge_btn_color || 'green');
+          setFriendBtnColor(p.friend_btn_color || 'default');
+        }
+      }).catch(() => {});
+    }).catch(() => {});
+  }, []);
+
+  const isDirty = profile && (
+    displayName !== (profile.display_name || '') ||
+    bio !== (profile.bio || '') ||
+    avatarEmoji !== (profile.avatar_id || 'avatar1') ||
+    avatarUrl !== (profile.custom_avatar_url || '') ||
+    colorId !== (profile.banner_color || 'gold') ||
+    cardBgColor !== (profile.card_bg_color || 'default') ||
+    challengeBtnColor !== (profile.challenge_btn_color || 'green') ||
+    friendBtnColor !== (profile.friend_btn_color || 'default')
+  );
+
+  const handleSave = async () => {
+    if (!profile) return;
+    setSaving(true);
+    try {
+      await entities.UserProfile.update(profile.id, {
+        display_name: displayName.trim() || profile.username,
+        bio: bio.trim(),
+        avatar_id: avatarEmoji,
+        custom_avatar_url: avatarUrl || null,
+        banner_color: colorId,
+        card_bg_color: cardBgColor,
+        challenge_btn_color: challengeBtnColor,
+        friend_btn_color: friendBtnColor,
+      });
+      setProfile(prev => ({ ...prev, display_name: displayName, bio, avatar_id: avatarEmoji, custom_avatar_url: avatarUrl, banner_color: colorId, card_bg_color: cardBgColor, challenge_btn_color: challengeBtnColor, friend_btn_color: friendBtnColor }));
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      toast.success('Profile saved!');
+    } catch(e) {
+      toast.error('Failed to save — try again');
+    } finally { setSaving(false); }
+  };
+
+  const handleReset = () => {
+    if (!profile) return;
+    setDisplayName(profile.display_name || '');
+    setBio(profile.bio || '');
+    setAvatarEmoji(profile.avatar_id || 'avatar1');
+    setAvatarUrl(profile.custom_avatar_url || '');
+    setColorId(profile.banner_color || 'gold');
+    setCardBgColor(profile.card_bg_color || 'default');
+    setChallengeBtnColor(profile.challenge_btn_color || 'green');
+    setFriendBtnColor(profile.friend_btn_color || 'default');
+  };
+
+  const handleFileUpload = async (file) => {
+    if (!file || !file.type.startsWith('image/')) { toast.error('Select an image file'); return; }
+    const prevUrl = avatarUrl;
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarUrl(previewUrl);
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop().toLowerCase();
+      const fileName = `avatar_${user.id}.${ext}`;
+      const { error } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true, cacheControl: '3600' });
+      if (error) throw error;
+      const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
+      const persistentUrl = `${data.publicUrl}?t=${Date.now()}`;
+      URL.revokeObjectURL(previewUrl);
+      setAvatarUrl(persistentUrl);
+      toast.success('Photo uploaded!');
+    } catch(e) {
+      URL.revokeObjectURL(previewUrl);
+      setAvatarUrl(prevUrl);
+      console.error('Avatar upload failed:', e);
+      toast.error('Upload failed. Please try again.');
+    } finally { setUploading(false); }
+  };
+
+  const currentColor = getColorById(colorId);
+  const emojiValue = AVATAR_PRESETS[avatarEmoji] || '🦁';
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: T.dark,
+      color: T.text,
+      fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
+      padding: '24px 24px 100px',
+    }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Cormorant+Garamond:wght@600;700&display=swap');
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse-gold { 0%,100% { box-shadow: 0 0 0 0 rgba(184,151,58,0.3); } 50% { box-shadow: 0 0 0 6px rgba(184,151,58,0); } }
+        ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
+      `}</style>
+
+      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+
+        {/* ── Header ── */}
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+          style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, gap: 16, flexWrap: 'wrap' }}
+        >
+          <div>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 700, fontSize: 32, color: T.text, margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Paintbrush style={{ width: 22, height: 22, color: T.gold }} /> Customize
+            </h1>
+            <p style={{ fontSize: 12, color: T.textMuted, marginTop: 4 }}>
+              Personalize how others see you across Cash Clash
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            {isDirty && (
+              <button onClick={handleReset} style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '8px 14px', borderRadius: 9,
+                background: 'transparent', border: `1px solid ${T.border}`,
+                color: T.textMuted, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+              }}>
+                <RotateCcw style={{ width: 11, height: 11 }} /> Reset
+              </button>
+            )}
+            <button onClick={() => setPreviewOpen(true)} style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '8px 14px', borderRadius: 9,
+              background: T.goldDim, border: `1px solid ${T.goldBorder}`,
+              color: T.gold, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+            }}>
+              <Eye style={{ width: 11, height: 11 }} /> Preview
+            </button>
+            <button onClick={handleSave} disabled={saving || !isDirty} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 18px', borderRadius: 9, border: 'none', cursor: (!isDirty || saving) ? 'not-allowed' : 'pointer',
+              background: isDirty ? `linear-gradient(135deg, ${T.gold}, ${T.goldLight})` : T.surfaceHigh,
+              color: isDirty ? '#0C0C0E' : T.textMuted,
+              fontSize: 12, fontWeight: 700, transition: 'all 0.2s',
+              animation: isDirty ? 'pulse-gold 2s infinite' : 'none',
+            }}>
+              {saving
+                ? <div style={{ width: 12, height: 12, border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#0C0C0E', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                : <Save style={{ width: 12, height: 12 }} />}
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </motion.div>
+
+        {/* ── Two-column layout ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
+
+          {/* LEFT: forms */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {/* Identity */}
+            <Section icon={User} title="Identity">
+              <Field label="Display Name" hint="This is your public name — not your @username.">
+                <TextInput value={displayName} onChange={setDisplayName} placeholder="Your Name" maxLength={32} />
+              </Field>
+              <Field label="Bio" hint="Up to 120 characters shown on your profile.">
+                <TextInput value={bio} onChange={setBio} placeholder="Tell people who you are..." maxLength={120} multiline />
+              </Field>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <span style={{ fontSize: 10, color: bio.length > 100 ? T.danger : T.textDim }}>{bio.length}/120</span>
+              </div>
+            </Section>
+
+            {/* Profile Photo */}
+            <Section icon={Camera} title="Profile Photo">
+              <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', marginBottom: 18 }}>
+                {/* Current avatar preview */}
+                <div style={{
+                  width: 72, height: 72, borderRadius: '50%', flexShrink: 0,
+                  border: `2px solid ${T.goldBorder}`,
+                  background: `${currentColor.accent}18`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  overflow: 'hidden', position: 'relative',
+                }}>
+                  {avatarUrl
+                    ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <span style={{ fontSize: 36 }}>{emojiValue}</span>}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 12, color: T.text, fontWeight: 600, margin: '0 0 6px' }}>Custom Photo</p>
+                  <p style={{ fontSize: 11, color: T.textMuted, margin: '0 0 10px', lineHeight: 1.5 }}>Upload a JPG or PNG. Will display instead of your emoji.</p>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '7px 12px', borderRadius: 8, border: `1px solid ${T.border}`,
+                      background: T.surfaceHigh, color: T.text, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    }}>
+                      {uploading
+                        ? <div style={{ width: 11, height: 11, border: `2px solid ${T.textMuted}`, borderTopColor: T.gold, borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                        : <Camera style={{ width: 11, height: 11 }} />}
+                      {uploading ? 'Uploading...' : 'Upload Photo'}
+                    </button>
+                    {avatarUrl && (
+                      <button onClick={() => setAvatarUrl('')} style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        padding: '7px 12px', borderRadius: 8, border: `1px solid rgba(192,57,43,0.3)`,
+                        background: T.dangerDim, color: T.danger, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                      }}>
+                        <X style={{ width: 11, height: 11 }} /> Remove
+                      </button>
+                    )}
+                  </div>
+                  <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+                    onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0])} />
+                </div>
+              </div>
+
+              {/* Emoji grid */}
+              {!avatarUrl && (
+                <>
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.textMuted, marginBottom: 10 }}>
+                    Or choose an emoji avatar
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8 }}>
+                    {Object.entries(AVATAR_PRESETS).map(([key, emoji]) => (
+                      <button key={key} onClick={() => setAvatarEmoji(key)} style={{
+                        padding: '10px', borderRadius: 10, border: `1.5px solid ${avatarEmoji === key ? T.goldBorder : T.border}`,
+                        background: avatarEmoji === key ? T.goldDim : T.surfaceHigh,
+                        fontSize: 22, cursor: 'pointer', transition: 'all 0.12s',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        position: 'relative',
+                      }}>
+                        {emoji}
+                        {avatarEmoji === key && (
+                          <div style={{
+                            position: 'absolute', bottom: 3, right: 3,
+                            width: 14, height: 14, borderRadius: '50%',
+                            background: T.gold, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            <Check style={{ width: 8, height: 8, color: '#0C0C0E' }} />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </Section>
+
+            {/* Profile Color */}
+            <Section icon={Palette} title="Profile Color">
+              <p style={{ fontSize: 11, color: T.textMuted, marginBottom: 14, lineHeight: 1.55 }}>
+                Sets your banner color and accent when others view your profile.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+                {PROFILE_COLORS.map(c => (
+                  <button key={c.id} onClick={() => setColorId(c.id)} style={{
+                    padding: 0, border: `2px solid ${colorId === c.id ? c.accent : 'transparent'}`,
+                    borderRadius: 12, cursor: 'pointer', background: 'none', overflow: 'hidden',
+                    transition: 'all 0.15s', position: 'relative',
+                    boxShadow: colorId === c.id ? `0 0 12px ${c.accent}55` : 'none',
+                  }}>
+                    <div style={{ height: 44, background: c.bg }} />
+                    <div style={{ padding: '5px 4px', background: T.surfaceHigh, textAlign: 'center' }}>
+                      <span style={{ fontSize: 9, color: colorId === c.id ? c.accent : T.textMuted, fontWeight: 700, letterSpacing: '0.04em' }}>
+                        {c.label}
+                      </span>
+                    </div>
+                    {colorId === c.id && (
+                      <div style={{
+                        position: 'absolute', top: 6, right: 6,
+                        width: 16, height: 16, borderRadius: '50%',
+                        background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <Check style={{ width: 9, height: 9, color: '#fff' }} />
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </Section>
+
+            {/* UI Colors */}
+            <Section icon={Paintbrush} title="UI Colors">
+              <p style={{ fontSize: 11, color: T.textMuted, marginBottom: 18, lineHeight: 1.55 }}>
+                Customize colors on your profile card that others see.
+              </p>
+
+              {/* Card Background */}
+              <Field label="Card Background" hint="The white/background area of your profile popup.">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                  {CARD_BG_COLORS.map(c => (
+                    <button key={c.id} onClick={() => setCardBgColor(c.id)} style={{
+                      padding: 0, border: `2px solid ${cardBgColor === c.id ? T.gold : T.border}`,
+                      borderRadius: 10, cursor: 'pointer', background: 'none', overflow: 'hidden',
+                      transition: 'all 0.15s', position: 'relative',
+                      boxShadow: cardBgColor === c.id ? `0 0 10px rgba(184,151,58,0.4)` : 'none',
+                    }}>
+                      <div style={{ height: 36, background: c.preview, border: '1px solid rgba(0,0,0,0.06)' }} />
+                      <div style={{ padding: '4px', background: T.surfaceHigh, textAlign: 'center' }}>
+                        <span style={{ fontSize: 9, color: cardBgColor === c.id ? T.gold : T.textMuted, fontWeight: 700 }}>{c.label}</span>
+                      </div>
+                      {cardBgColor === c.id && (
+                        <div style={{ position: 'absolute', top: 4, right: 4, width: 14, height: 14, borderRadius: '50%', background: T.gold, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Check style={{ width: 8, height: 8, color: '#0C0C0E' }} />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              {/* Challenge Button */}
+              <Field label="Challenge Button" hint="Color of the Challenge button on your profile.">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {CHALLENGE_BTN_COLORS.map(c => (
+                    <button key={c.id} onClick={() => setChallengeBtnColor(c.id)} style={{
+                      padding: '6px 12px', borderRadius: 8, border: `2px solid ${challengeBtnColor === c.id ? '#fff' : 'transparent'}`,
+                      background: c.bg, color: c.text, fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                      boxShadow: challengeBtnColor === c.id ? `0 0 10px ${c.bg}88` : 'none',
+                      transition: 'all 0.15s',
+                    }}>
+                      {challengeBtnColor === c.id && '✓ '}{c.label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              {/* Friend/Add Button */}
+              <Field label="Friend / Add Button" hint="Color of the Friends or Add Friend button.">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {FRIEND_BTN_COLORS.map(c => (
+                    <button key={c.id} onClick={() => setFriendBtnColor(c.id)} style={{
+                      padding: '6px 12px', borderRadius: 8, border: `2px solid ${friendBtnColor === c.id ? T.gold : T.border}`,
+                      background: c.bg, color: c.text, fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                      boxShadow: friendBtnColor === c.id ? `0 0 10px rgba(184,151,58,0.3)` : 'none',
+                      transition: 'all 0.15s',
+                    }}>
+                      {friendBtnColor === c.id && '✓ '}{c.label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            </Section>
+          </div>
+
+          {/* RIGHT: live preview (sticky) */}
+          <div style={{ position: 'sticky', top: 24 }}>
+            <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
+              <div style={{ marginBottom: 10 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.textMuted, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Eye style={{ width: 11, height: 11 }} /> Live Preview
+                </p>
+              </div>
+              <ProfilePreview
+                displayName={displayName}
+                username={profile?.username}
+                bio={bio}
+                avatarEmoji={emojiValue}
+                avatarUrl={avatarUrl}
+                colorId={colorId}
+                level={profile?.level}
+                xp={profile?.xp}
+                cardBgColor={cardBgColor}
+                challengeBtnColor={challengeBtnColor}
+                friendBtnColor={friendBtnColor}
+              />
+
+              {isDirty && (
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                  style={{
+                    marginTop: 12, padding: '10px 14px', borderRadius: 10,
+                    background: T.goldDim, border: `1px solid ${T.goldBorder}`,
+                    display: 'flex', alignItems: 'center', gap: 8,
+                  }}
+                >
+                  <Sparkles style={{ width: 12, height: 12, color: T.gold, flexShrink: 0 }} />
+                  <p style={{ fontSize: 11, color: T.gold, margin: 0 }}>You have unsaved changes</p>
+                  <button onClick={handleSave} disabled={saving} style={{
+                    marginLeft: 'auto', padding: '4px 10px', borderRadius: 7, border: 'none',
+                    background: T.gold, color: '#0C0C0E', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+                  }}>
+                    Save
+                  </button>
+                </motion.div>
+              )}
+
+              {/* What others see note */}
+              <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 10, background: T.surfaceHigh, border: `1px solid ${T.border}` }}>
+                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.textMuted, margin: '0 0 8px' }}>
+                  Shown on your profile:
+                </p>
+                {[
+                  { label: 'Leaderboard', desc: 'Name, avatar & level' },
+                  { label: 'Challenges',  desc: 'Name & avatar' },
+                  { label: 'Friends',     desc: 'Full profile card' },
+                  { label: 'Clans',       desc: 'Name, color & level' },
+                ].map(({ label, desc }) => (
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: T.text }}>{label}</span>
+                    <span style={{ fontSize: 10, color: T.textMuted }}>{desc}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Mobile preview modal ── */}
+      <AnimatePresence>
+        {previewOpen && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+            onClick={() => setPreviewOpen(false)}
+          >
+            <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <p style={{ fontSize: 12, color: T.textMuted, margin: 0 }}>How others see your profile</p>
+                <button onClick={() => setPreviewOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textMuted }}>
+                  <X style={{ width: 16, height: 16 }} />
+                </button>
+              </div>
+              <ProfilePreview
+                displayName={displayName}
+                username={profile?.username}
+                bio={bio}
+                avatarEmoji={emojiValue}
+                avatarUrl={avatarUrl}
+                colorId={colorId}
+                level={profile?.level}
+                xp={profile?.xp}
+                cardBgColor={cardBgColor}
+                challengeBtnColor={challengeBtnColor}
+                friendBtnColor={friendBtnColor}
+              />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

@@ -91,6 +91,28 @@ export const XP_ACTIONS = {
   WEEK_STREAK:        120,
 };
 
+// ── Coin Rewards ─────────────────────────────────────────────
+export const COIN_ACTIONS = {
+  COMPLETE_OBJECTIVE: 20,  // Complete an objective in a clash
+  WIN_CLASH:          50,  // Extra bonus for winning a clash
+  WIN_SAVINGS_BATTLE: 50,  // Win a savings battle
+  WIN_TOURNAMENT:    100,  // Win a full tournament
+  LEVEL_UP:          100,  // Bonus coins awarded on every level-up
+  // Legacy aliases kept so existing call-sites don't break
+  WIN_CHALLENGE:      50,
+  COMPLETE_TASK:      20,
+};
+
+/**
+ * Returns how many level-up coin bonuses to award when going from oldXP to newXP.
+ * e.g. if the player jumped two levels, award 2 × COIN_ACTIONS.LEVEL_UP.
+ */
+export function countLevelUps(oldXP, newXP) {
+  const oldLevel = getLevelFromXP(oldXP);
+  const newLevel = getLevelFromXP(newXP);
+  return Math.max(0, newLevel - oldLevel);
+}
+
 // Badges
 export const ALL_BADGES = [
   { id: 'first_track',    name: 'First Track',      description: 'Log your first transaction',          icon: '🎯',  xpReward: 25,  condition: (s) => s.totalTransactions >= 1 },
@@ -128,8 +150,7 @@ export function getLockedBadges(earnedBadgeIds) {
   return ALL_BADGES.filter(b => !(earnedBadgeIds || []).includes(b.id));
 }
 
-// Returns true if a profile has the Godly badge (Checks for both possible IDs)
+// Returns true only for @carlos
 export function isGodly(profile) {
-  const badges = profile?.badges || [];
-  return badges.includes('godly') || badges.includes('RUSHorDRAG');
+  return profile?.username === 'carlos';
 }

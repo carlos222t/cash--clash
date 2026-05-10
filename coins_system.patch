@@ -1,0 +1,194 @@
+--- a/src/components/game/GameUtils.jsx	2026-05-07 19:51:12.318732368 +0000
++++ b/src/components/game/GameUtils.jsx	2026-05-07 19:51:19.841113409 +0000
+@@ -91,6 +91,13 @@
+   WEEK_STREAK:        120,
+ };
+ 
++// ── Coin Rewards ─────────────────────────────────────────────
++export const COIN_ACTIONS = {
++  WIN_CHALLENGE:   50,   // Win any clash (savings battle or rush)
++  WIN_TOURNAMENT: 100,   // Win a full tournament
++  COMPLETE_TASK:    5,   // Complete a single rush task
++};
++
+ // Badges
+ export const ALL_BADGES = [
+   { id: 'first_track',    name: 'First Track',      description: 'Log your first transaction',          icon: '🎯',  xpReward: 25,  condition: (s) => s.totalTransactions >= 1 },
+--- a/src/pages/Challenges.jsx	2026-05-07 19:51:12.326928339 +0000
++++ b/src/pages/Challenges.jsx	2026-05-07 19:51:37.589159775 +0000
+@@ -1,7 +1,7 @@
+ import React, { useState, useEffect, useRef } from 'react';
+ import { useLocation } from 'react-router-dom';
+ import { auth, entities, profilesApi, notificationsApi, friendsApi, supabase } from '@/api/supabaseClient';
+-import { XP_ACTIONS, getLevelFromXP } from '@/components/game/GameUtils';
++import { XP_ACTIONS, getLevelFromXP, COIN_ACTIONS } from '@/components/game/GameUtils';
+ import { useQuery, useQueryClient } from '@tanstack/react-query';
+ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+ import { Button } from '@/components/ui/button';
+@@ -2142,6 +2142,7 @@
+           await entities.UserProfile.update(profile.id, {
+             xp: newXP, level: newLevel,
+             battles_won: (profile.battles_won || 0) + 1,
++            coins: (profile.coins || 0) + COIN_ACTIONS.WIN_CHALLENGE,
+             badges,
+           });
+           queryClient.invalidateQueries({ queryKey: ['profile'] });
+@@ -2152,9 +2153,18 @@
+     queryClient.invalidateQueries({ queryKey: ['challenges'] });
+ 
+     if (isWinner) {
+-      toast.success('All tasks complete — +100 XP awarded!');
++      toast.success(`All tasks complete — +100 XP & +${COIN_ACTIONS.WIN_CHALLENGE} coins!`);
+     } else {
+-      toast.success(`Objective verified! ${myDoneCount}/${tasks.length} done`);
++      try {
++        const prof = await profilesApi.getByUserId(user.id);
++        if (prof) {
++          await entities.UserProfile.update(prof.id, {
++            coins: (prof.coins || 0) + COIN_ACTIONS.COMPLETE_TASK,
++          });
++          queryClient.invalidateQueries({ queryKey: ['profile'] });
++        }
++      } catch (e) { console.error('Coin award failed', e); }
++      toast.success(`Objective verified! ${myDoneCount}/${tasks.length} done (+${COIN_ACTIONS.COMPLETE_TASK} coins)`);
+     }
+   };
+ 
+@@ -2253,11 +2263,12 @@
+           await entities.UserProfile.update(profile.id, {
+             xp: (profile.xp || 0) + 250,
+             tournament_wins: (profile.tournament_wins || 0) + 1,
++            coins: (profile.coins || 0) + COIN_ACTIONS.WIN_TOURNAMENT,
+           });
+           queryClient.invalidateQueries({ queryKey: ['profile'] });
+         }
+       } catch(e) {}
+-      toast.success('You won the tournament! +250 XP');
++      toast.success(`You won the tournament! +250 XP & +${COIN_ACTIONS.WIN_TOURNAMENT} coins!`);
+     } else {
+       // Seed next round
+       const nextMatchIndex = Math.ceil(match.match / 2);
+@@ -2842,7 +2853,18 @@
+                             await entities.Tournament.update(t.id, { bracket: newBracket });
+                             queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+                             if (allDone) handleTournamentMatchWin(t, myMatch);
+-                            else toast.success(`Task done! ${updatedTasks.filter(tk => (tk.completed_by || []).includes(user.id)).length}/${updatedTasks.length} complete`);
++                            else {
++                              try {
++                                const prof = await profilesApi.getByUserId(user.id);
++                                if (prof) {
++                                  await entities.UserProfile.update(prof.id, {
++                                    coins: (prof.coins || 0) + COIN_ACTIONS.COMPLETE_TASK,
++                                  });
++                                  queryClient.invalidateQueries({ queryKey: ['profile'] });
++                                }
++                              } catch (e) {}
++                              toast.success(`Task done! ${updatedTasks.filter(tk => (tk.completed_by || []).includes(user.id)).length}/${updatedTasks.length} complete (+${COIN_ACTIONS.COMPLETE_TASK} coins)`);
++                            }
+                           }}
+                         />
+                       </div>
+--- a/src/pages/CryptoPackOpener.jsx	2026-05-07 19:51:12.330046309 +0000
++++ b/src/pages/CryptoPackOpener.jsx	2026-05-07 19:52:01.559198176 +0000
+@@ -5,6 +5,8 @@
+ // ============================================================
+ 
+ import { useState, useEffect, useMemo } from "react";
++import { auth, profilesApi } from '@/api/supabaseClient';
++import { useQueryClient } from '@tanstack/react-query';
+ 
+ // ─── Data ────────────────────────────────────────────────────
+ const RARITY_ORDER = ["common", "rare", "epic", "legendary", "mythic"];
+@@ -538,26 +540,45 @@
+  *   onSpend   {Function} – called with (amount) when pack is purchased
+  *   onResult  {Function} – called with (card) when a card is rolled
+  */
+-export default function CryptoPackOpener({ coins, packCost = 100, onSpend, onResult }) {
++export default function CryptoPackOpener() {
+   useEffect(() => { injectCSS(); }, []);
++  const queryClient = useQueryClient();
+ 
+-  const [phase, setPhase]     = useState("idle"); // idle | shaking | bursting | reveal
++  const [user, setUser]            = useState(null);
++  const [coins, setCoins]          = useState(0);
++  const [loadingCoins, setLoading] = useState(true);
++
++  useEffect(() => {
++    auth.getUser().then(({ data }) => {
++      if (data?.user) {
++        setUser(data.user);
++        profilesApi.getByUserId(data.user.id).then(profile => {
++          if (profile) setCoins(profile.coins ?? 0);
++          setLoading(false);
++        });
++      } else {
++        setLoading(false);
++      }
++    });
++  }, []);
++
++  const packCost = 0; // Packs are FREE
++
++  const [phase, setPhase]     = useState("idle");
+   const [card, setCard]       = useState(null);
+   const [owned, setOwned]     = useState({});
+-  const [activeTab, setTab]   = useState("open"); // open | collection
++  const [activeTab, setTab]   = useState("open");
+ 
+-  const canBuy = coins >= packCost && phase === "idle";
++  const canBuy = phase === "idle";
+ 
+   const open = () => {
+     if (!canBuy) return;
+-    onSpend?.(packCost);
+     setPhase("shaking");
+     setTimeout(() => setPhase("bursting"), 900);
+     setTimeout(() => {
+       const result = rollCard();
+       setCard(result);
+       setOwned(prev => ({ ...prev, [result.id]: (prev[result.id] || 0) + 1 }));
+-      onResult?.(result);
+       setPhase("reveal");
+     }, 1500);
+   };
+@@ -605,7 +626,7 @@
+             <>
+               <PackButton
+                 onClick={open}
+-                disabled={!canBuy || phase !== "idle"}
++                disabled={phase !== "idle"}
+                 shaking={phase === "shaking"}
+                 bursting={phase === "bursting"}
+               />
+@@ -613,22 +634,22 @@
+                 <>
+                   <button
+                     onClick={open}
+-                    disabled={!canBuy}
++                    disabled={phase !== "idle"}
+                     style={{
+-                      background: canBuy ? "linear-gradient(135deg, #c9a84c, #7a5e22)" : "#333",
+-                      color: canBuy ? "#0c0c10" : "#555",
++                      background: "linear-gradient(135deg, #c9a84c, #7a5e22)",
++                      color: "#0c0c10",
+                       fontWeight: 700, fontSize: 15,
+                       padding: "14px 40px", borderRadius: 8, border: "none",
+-                      cursor: canBuy ? "pointer" : "not-allowed",
++                      cursor: "pointer",
+                       textTransform: "uppercase", letterSpacing: "0.2em",
+                     }}
+                   >
+-                    Acquire Position — ◈ {packCost}
++                    Open Pack — FREE
+                   </button>
+-                  {!canBuy && (
+-                    <p style={{ fontSize: 11, color: "#555", textTransform: "uppercase",
+-                      letterSpacing: "0.2em", margin: 0 }}>Insufficient capital</p>
+-                  )}
++                  <p style={{ fontSize: 11, color: "#888", textTransform: "uppercase",
++                    letterSpacing: "0.2em", margin: 0 }}>
++                    ◈ {loadingCoins ? "..." : coins} coins
++                  </p>
+                 </>
+               )}
+             </>

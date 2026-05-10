@@ -228,10 +228,14 @@ export default function Settings() {
   const [customAvatarInput, setCustomAvatarInput] = useState('');
   const [isSaving,          setIsSaving]          = useState(false);
   const [hasChanges,        setHasChanges]        = useState(false);
-  const [activeTab,         setActiveTab]         = useState('profile');
+  const [activeTab,         setActiveTab]         = useState('appearance');
   const [region,            setRegion]            = useState('us');
   const [myClan,            setMyClan]            = useState(null);
   const [enlargedImage,     setEnlargedImage]     = useState(null);
+  const [newUsername,       setNewUsername]       = useState('');
+  const [usernameChanges,   setUsernameChanges]   = useState([]);
+  const [savingUsername,    setSavingUsername]     = useState(false);
+  const [usernamePopup,     setUsernamePopup]      = useState(false);
   const queryClient    = useQueryClient();
   const originalValues = useRef({});
   const initialized    = useRef(false);
@@ -261,6 +265,7 @@ export default function Settings() {
       const avatarUrl = profile.custom_avatar_url || '';
       const reg       = profile.region || 'us';
       setDisplayName(name); setUsername(uname); setBio(bioVal);
+      setUsernameChanges(profile.username_changes || []);
       setSelectedAvatar(avatar); setRegion(reg);
       setCustomAvatarUrl(avatarUrl); setCustomAvatarInput(avatarUrl);
       originalValues.current = { name, uname, bioVal, avatar, avatarUrl, reg };
@@ -326,6 +331,47 @@ export default function Settings() {
     } finally { setIsSaving(false); }
   };
 
+  const handleChangeUsername = async () => {
+    const trimmed = newUsername.trim().toLowerCase().replace(/\s/g, '');
+    if (!trimmed) { toast.error('Enter a username'); return; }
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(trimmed)) {
+      toast.error('3–20 chars, letters/numbers/underscores only'); return;
+    }
+    if (trimmed === username) { toast.error('That is already your username'); return; }
+    // Check 2x/month limit
+    const now = new Date();
+    const thisMonth = `${now.getFullYear()}-${now.getMonth()}`;
+    const changesThisMonth = (usernameChanges || []).filter(d => {
+      const dd = new Date(d);
+      return `${dd.getFullYear()}-${dd.getMonth()}` === thisMonth;
+    });
+    if (changesThisMonth.length >= 2) {
+      toast.error('You can only change your username twice per month'); return;
+    }
+    setSavingUsername(true);
+    try {
+      // Check uniqueness
+      const { data: existing } = await supabase
+        .from('user_profiles').select('id').eq('username', trimmed).maybeSingle();
+      if (existing && existing.id !== profile?.id) {
+        setUsernamePopup(true); setSavingUsername(false); return;
+      }
+      const updatedChanges = [...(usernameChanges || []), new Date().toISOString()];
+      await entities.UserProfile.update(profile.id, {
+        username: trimmed,
+        username_changes: updatedChanges,
+      });
+      setUsername(trimmed);
+      setUsernameChanges(updatedChanges);
+      setNewUsername('');
+      originalValues.current.uname = trimmed;
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      toast.success('Username updated!');
+    } catch (e) {
+      toast.error('Failed to update username');
+    } finally { setSavingUsername(false); }
+  };
+
   const handleApplyCustomAvatar = () => {
     if (!customAvatarInput.trim()) { toast.error('Please enter an image URL'); return; }
     try { new URL(customAvatarInput.trim()); } catch { toast.error('Please enter a valid URL'); return; }
@@ -353,7 +399,6 @@ export default function Settings() {
   const avatarDisplay = getAvatarDisplay();
 
   const TABS = [
-    { id: 'profile',    label: 'Profile',    icon: User    },
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'account',    label: 'Account',    icon: Shield  },
     { id: 'blocked',    label: 'Blocked',    icon: Ban     },
@@ -449,101 +494,6 @@ export default function Settings() {
 
           <motion.div key={activeTab} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}>
 
-            {/* ── PROFILE TAB ─────────────────────────────────────────── */}
-            {activeTab === 'profile' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {/* Display Info */}
-                <div style={{ background: tk.surfaceAlt, border: `1px solid ${tk.border}`, borderRadius: 14, overflow: 'hidden' }}>
-                  <div style={{ padding: '14px 18px', borderBottom: `1px solid ${tk.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <User style={{ width: 14, height: 14, color: tk.gold }} />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: tk.text }}>Display Info</span>
-                    <span style={{ fontSize: 11, color: tk.muted }}>— how other players see you</span>
-                  </div>
-                  <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    {/* Display Name */}
-                    <div>
-                      <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: tk.muted, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 5 }}>Display Name</label>
-                      <input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="Enter your display name" maxLength={30}
-                        style={{ width: '100%', background: tk.dark, border: `1px solid rgba(255,255,255,0.1)`, borderRadius: 8, color: tk.text, fontSize: 13, height: 36, padding: '0 12px', fontFamily: 'inherit', outline: 'none', transition: 'border-color 0.15s' }}
-                        onFocus={e => e.target.style.borderColor = 'rgba(184,151,58,0.5)'}
-                        onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-                      />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                        <span style={{ fontSize: 10, color: tk.dim }}>2–30 characters</span>
-                        <span style={{ fontSize: 10, color: displayName.length > 28 ? tk.red : tk.dim }}>{displayName.length}/30</span>
-                      </div>
-                    </div>
-                    {/* Username */}
-                    <div>
-                      <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: tk.muted, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 5 }}>
-                        Username <span style={{ color: tk.gold, textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>— used for clash invites</span>
-                      </label>
-                      <div style={{ position: 'relative' }}>
-                        <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: tk.muted, fontSize: 13 }}>@</span>
-                        <input value={username} onChange={e => setUsername(e.target.value.replace(/\s/g, ''))} placeholder="your_username" maxLength={20}
-                          style={{ width: '100%', background: tk.dark, border: `1px solid rgba(255,255,255,0.1)`, borderRadius: 8, color: tk.text, fontSize: 13, height: 36, paddingLeft: 28, paddingRight: 12, fontFamily: 'inherit', outline: 'none', transition: 'border-color 0.15s' }}
-                          onFocus={e => e.target.style.borderColor = 'rgba(184,151,58,0.5)'}
-                          onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-                        />
-                      </div>
-                      <span style={{ fontSize: 10, color: tk.dim, marginTop: 4, display: 'block' }}>3–20 chars, letters/numbers/underscores. Must be unique.</span>
-                    </div>
-                    {/* Bio */}
-                    <div>
-                      <label style={{ display: 'block', fontSize: 10, fontWeight: 600, color: tk.muted, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 5 }}>Bio <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: tk.dim }}>(optional)</span></label>
-                      <input value={bio} onChange={e => setBio(e.target.value)} placeholder="A short bio about yourself..." maxLength={80}
-                        style={{ width: '100%', background: tk.dark, border: `1px solid rgba(255,255,255,0.1)`, borderRadius: 8, color: tk.text, fontSize: 13, height: 36, padding: '0 12px', fontFamily: 'inherit', outline: 'none', transition: 'border-color 0.15s' }}
-                        onFocus={e => e.target.style.borderColor = 'rgba(184,151,58,0.5)'}
-                        onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Profile Picture */}
-                <div style={{ background: tk.surfaceAlt, border: `1px solid ${tk.border}`, borderRadius: 14, overflow: 'hidden' }}>
-                  <div style={{ padding: '14px 18px', borderBottom: `1px solid ${tk.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Camera style={{ width: 14, height: 14, color: tk.gold }} />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: tk.text }}>Profile Picture</span>
-                  </div>
-                  <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 8 }}>
-                      {AVATAR_PRESETS.map(avatar => {
-                        const active = selectedAvatar === avatar.id && !customAvatarUrl;
-                        return (
-                          <button key={avatar.id} onClick={() => { setSelectedAvatar(avatar.id); setCustomAvatarUrl(''); }} title={avatar.label}
-                            style={{ width: '100%', aspectRatio: '1', borderRadius: 11, fontSize: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.15s', border: `2px solid ${active ? tk.gold : 'transparent'}`, background: active ? tk.goldDim : 'rgba(255,255,255,0.04)', transform: active ? 'scale(1.06)' : 'scale(1)', fontFamily: 'inherit' }}
-                          >{avatar.emoji}</button>
-                        );
-                      })}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: 10, fontWeight: 600, color: tk.muted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Or use a custom image URL</label>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <input value={customAvatarInput} onChange={e => setCustomAvatarInput(e.target.value)} placeholder="https://example.com/photo.jpg"
-                          style={{ flex: 1, background: tk.dark, border: `1px solid rgba(255,255,255,0.1)`, borderRadius: 8, color: tk.text, fontSize: 12, height: 34, padding: '0 12px', fontFamily: 'inherit', outline: 'none' }}
-                          onFocus={e => e.target.style.borderColor = 'rgba(184,151,58,0.5)'}
-                          onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-                        />
-                        <button onClick={handleApplyCustomAvatar}
-                          style={{ padding: '0 14px', height: 34, borderRadius: 8, fontSize: 12, fontWeight: 600, background: 'transparent', color: tk.muted, border: `1px solid rgba(255,255,255,0.1)`, cursor: 'pointer', transition: 'border-color 0.15s,color 0.15s', fontFamily: 'inherit' }}
-                          onMouseEnter={e => { e.target.style.borderColor = tk.goldBorder; e.target.style.color = tk.text; }}
-                          onMouseLeave={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.color = tk.muted; }}
-                        >Apply</button>
-                      </div>
-                      {customAvatarUrl && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <CheckCircle2 style={{ width: 13, height: 13, color: tk.green, flexShrink: 0 }} />
-                          <span style={{ fontSize: 11, color: tk.green, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Custom avatar active</span>
-                          <button onClick={handleClearCustomAvatar} style={{ fontSize: 11, color: tk.red, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>Remove</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* ── APPEARANCE TAB ──────────────────────────────────────── */}
             {activeTab === 'appearance' && (
               <div style={{ background: tk.surfaceAlt, border: `1px solid ${tk.border}`, borderRadius: 14, overflow: 'hidden' }}>
@@ -600,9 +550,9 @@ export default function Settings() {
                   </div>
                   <div style={{ padding: '4px 18px' }}>
                     {[
-                      { label: 'Email',        value: user?.email || '—' },
-                      { label: 'Username',      value: profile?.username ? `@${profile.username}` : '—' },
-                      { label: 'Battles Won',   value: profile?.battles_won || 0 },
+                      { label: 'Email',      value: user?.email || '—' },
+                      { label: 'Username',   value: username ? `@${username}` : '—' },
+                      { label: 'Battles Won', value: profile?.battles_won || 0 },
                     ].map((row, i, arr) => (
                       <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 0', borderBottom: i < arr.length - 1 ? `1px solid ${tk.border}` : 'none' }}>
                         <span style={{ fontSize: 12, color: tk.muted }}>{row.label}</span>
@@ -611,6 +561,53 @@ export default function Settings() {
                     ))}
                   </div>
                 </div>
+
+                {/* Change Username */}
+                {(() => {
+                  const now = new Date();
+                  const thisMonth = `${now.getFullYear()}-${now.getMonth()}`;
+                  const changesThisMonth = (usernameChanges || []).filter(d => {
+                    const dd = new Date(d); return `${dd.getFullYear()}-${dd.getMonth()}` === thisMonth;
+                  }).length;
+                  const remaining = 2 - changesThisMonth;
+                  return (
+                    <div style={{ background: tk.surfaceAlt, border: `1px solid ${tk.border}`, borderRadius: 14, overflow: 'hidden' }}>
+                      <div style={{ padding: '14px 18px', borderBottom: `1px solid ${tk.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <AtSign style={{ width: 14, height: 14, color: tk.gold }} />
+                        <span style={{ fontSize: 13, fontWeight: 600, color: tk.text }}>Change Username</span>
+                        <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: remaining > 0 ? tk.goldDim : tk.redDim, color: remaining > 0 ? tk.gold : tk.red, border: `1px solid ${remaining > 0 ? tk.goldBorder : tk.redBorder}` }}>
+                          {remaining}/2 left this month
+                        </span>
+                      </div>
+                      <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <p style={{ margin: 0, fontSize: 11, color: tk.muted }}>Current: <span style={{ color: tk.text, fontWeight: 600 }}>@{username || '—'}</span></p>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <div style={{ position: 'relative', flex: 1 }}>
+                            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: tk.muted, fontSize: 13 }}>@</span>
+                            <input
+                              value={newUsername}
+                              onChange={e => setNewUsername(e.target.value.replace(/\s/g, ''))}
+                              placeholder="new_username"
+                              maxLength={20}
+                              disabled={remaining === 0}
+                              style={{ width: '100%', background: tk.dark, border: `1px solid rgba(255,255,255,0.1)`, borderRadius: 8, color: remaining === 0 ? tk.muted : tk.text, fontSize: 13, height: 36, paddingLeft: 28, paddingRight: 12, fontFamily: 'inherit', outline: 'none', transition: 'border-color 0.15s', opacity: remaining === 0 ? 0.5 : 1 }}
+                              onFocus={e => e.target.style.borderColor = 'rgba(184,151,58,0.5)'}
+                              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                            />
+                          </div>
+                          <button
+                            onClick={handleChangeUsername}
+                            disabled={savingUsername || remaining === 0}
+                            style={{ padding: '0 16px', height: 36, borderRadius: 8, fontSize: 12, fontWeight: 700, background: remaining === 0 ? 'rgba(255,255,255,0.05)' : tk.gold, color: remaining === 0 ? tk.muted : tk.dark, border: 'none', cursor: remaining === 0 ? 'not-allowed' : 'pointer', transition: 'opacity 0.15s', fontFamily: 'inherit', opacity: savingUsername ? 0.7 : 1, whiteSpace: 'nowrap' }}
+                          >
+                            {savingUsername ? '...' : 'Save'}
+                          </button>
+                        </div>
+                        <span style={{ fontSize: 10, color: tk.dim }}>3–20 chars · letters, numbers, underscores · max 2 changes/month</span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Sign Out */}
                 <div style={{ background: tk.surfaceAlt, border: `1px solid ${tk.redBorder}`, borderRadius: 14, overflow: 'hidden' }}>
@@ -655,6 +652,27 @@ export default function Settings() {
           )}
         </div>
       </div>
+
+      {/* ── USERNAME TAKEN POPUP ─────────────────────────────────────── */}
+      {usernamePopup && (
+        <div onClick={() => setUsernamePopup(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: tk.surface, border: `1px solid ${tk.redBorder}`, borderRadius: 16, padding: '28px 28px 22px', maxWidth: 300, width: '90%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: tk.redDim, border: `1px solid ${tk.redBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+              <AtSign style={{ width: 20, height: 20, color: tk.red }} />
+            </div>
+            <p style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 700, color: tk.text }}>Username Taken</p>
+            <p style={{ margin: '0 0 20px', fontSize: 12, color: tk.muted }}>
+              <span style={{ color: tk.gold, fontWeight: 600 }}>@{newUsername}</span> is already being used by someone else. Please choose a different username.
+            </p>
+            <button onClick={() => setUsernamePopup(false)}
+              style={{ width: '100%', padding: '9px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: tk.redDim, color: tk.red, border: `1px solid ${tk.redBorder}`, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── ENLARGED IMAGE OVERLAY ────────────────────────────────────── */}
       {enlargedImage && (

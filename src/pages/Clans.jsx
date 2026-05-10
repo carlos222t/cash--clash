@@ -139,6 +139,19 @@ function InviteMembersDialog({ open, onClose, clanId, userId, queryClient }) {
   const [invited, setInvited] = useState(new Set());
   const [activeTab, setActiveTab] = useState('friends');
 
+  // Load existing members + pending invites so we can grey them out
+  const { data: existingUserIds = new Set() } = useQuery({
+    queryKey: ['invite-dialog-existing', clanId],
+    queryFn: async () => {
+      const [{ data: members }, { data: pending }] = await Promise.all([
+        supabase.from('clan_members').select('user_id').eq('clan_id', clanId),
+        supabase.from('clan_join_requests').select('user_id').eq('clan_id', clanId).in('status', ['invited', 'pending']),
+      ]);
+      return new Set([...(members || []), ...(pending || [])].map(r => r.user_id));
+    },
+    enabled: open && !!clanId,
+  });
+
   const { data: friends = [] } = useQuery({
     queryKey: ['invite-friends', userId],
     queryFn: async () => {
@@ -165,27 +178,30 @@ function InviteMembersDialog({ open, onClose, clanId, userId, queryClient }) {
     } finally { setSearching(false); }
   };
 
+  // clan-invite-v2
   const invite = async (profile) => {
     try {
-      // Check if already invited
-      const { data: existing } = await supabase.from('notifications')
-        .select('id').eq('recipient_id', profile.created_by).eq('type', 'clan_invite').eq('related_id', clanId).maybeSingle();
+      // Check if already invited or already a member
+      const { data: existing } = await supabase.from('clan_join_requests')
+        .select('id').eq('clan_id', clanId).eq('user_id', profile.created_by)
+        .in('status', ['pending', 'invited']).maybeSingle();
       if (existing) { toast.error('Already invited'); return; }
 
-      const { error } = await supabase.from('notifications').insert({
-        recipient_id: profile.created_by,
-        sender_id: userId,
-        type: 'clan_invite',
-        title: `You've been invited to join a clan!`,
-        body: `You received a clan invitation. Open your inbox to accept or decline.`,
-        related_id: clanId,
-        read: false,
+      const { data: alreadyMember } = await supabase.from('clan_members')
+        .select('id').eq('clan_id', clanId).eq('user_id', profile.created_by).maybeSingle();
+      if (alreadyMember) { toast.error('Already a member'); return; }
+
+      // Insert as an invite (status='invited', initiated by owner)
+      const { error } = await supabase.from('clan_join_requests').insert({
+        clan_id: clanId,
+        user_id: profile.created_by,
+        status: 'invited',
+        invited_by: userId,
       });
-      if (error) { console.error('Invite error:', error); toast.error(error.message); }
-      else {
-        setInvited(prev => new Set([...prev, profile.created_by]));
-        toast.success(`Invite sent to ${profile.display_name}!`);
-      }
+      if (error) { console.error('Invite error:', error); toast.error(error.message); return; }
+
+      setInvited(prev => new Set([...prev, profile.created_by]));
+      toast.success(`Invite sent to ${profile.display_name}!`);
     } catch (e) { console.error(e); toast.error(e.message); }
   };
 
@@ -198,8 +214,10 @@ function InviteMembersDialog({ open, onClose, clanId, userId, queryClient }) {
         <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{p.display_name}</p>
         <p style={{ margin: 0, fontSize: 11, color: T.textMuted }}>@{p.username} · {p.xp} XP</p>
       </div>
-      {invited.has(p.created_by)
-        ? <span style={{ fontSize: 12, color: T.gold, fontWeight: 600 }}>✓ Added</span>
+      {existingUserIds.has(p.created_by)
+        ? <span style={{ fontSize: 12, color: T.textDim, fontWeight: 600 }}>✓ In clan</span>
+        : invited.has(p.created_by)
+        ? <span style={{ fontSize: 12, color: T.gold, fontWeight: 600 }}>✓ Sent</span>
         : <GoldButton variant="outline" onClick={() => invite(p)} style={{ padding: '6px 12px', fontSize: 12 }}><UserPlus size={14} /> Add</GoldButton>}
     </div>
   );
@@ -321,9 +339,16 @@ export default function Clans() {
   const { data: clanMembers = [] } = useQuery({
     queryKey: ['clan-members', myClan?.id],
     queryFn: async () => {
-      const { data } = await supabase.from('clan_members')
-        .select('*, profile:user_profiles!clan_members_user_id_fkey(*)')
+      const { data: members } = await supabase.from('clan_members')
+        .select('user_id, role, clan_id')
         .eq('clan_id', myClan.id).order('role', { ascending: true });
+      if (!members?.length) return [];
+      const ids = members.map(m => m.user_id);
+      const { data: profiles } = await supabase.from('user_profiles')
+        .select('created_by, display_name, username, custom_avatar_url, xp')
+        .in('created_by', ids);
+      const profileMap = Object.fromEntries((profiles || []).map(p => [p.created_by, p]));
+      const data = members.map(m => ({ ...m, profile: profileMap[m.user_id] || null }));
       return data || [];
     },
     enabled: !!myClan?.id,
@@ -331,19 +356,19 @@ export default function Clans() {
 
   const { data: pendingInvite } = useQuery({
     queryKey: ['clan-invite', user?.id],
+    // clan-invite-fixed
     queryFn: async () => {
       const { data } = await supabase.from('notifications')
-        .select('*, clan:clans!notifications_related_id_fkey(*)')
+        .select('id, recipient_id, sender_id, type, title, body, related_id, read, created_at')
         .eq('recipient_id', user.id).eq('type', 'clan_invite').eq('read', false)
         .order('created_at', { ascending: false }).limit(1).maybeSingle();
-      // Fallback: fetch clan separately if join didn't work
-      if (data && !data.clan && data.related_id) {
-        const { data: clan } = await supabase.from('clans').select('*').eq('id', data.related_id).maybeSingle();
-        return { ...data, clan };
-      }
-      return data;
+      if (!data) return null;
+      // Always fetch clan directly — don't trust the FK join
+      const { data: clan } = await supabase.from('clans').select('*').eq('id', data.related_id).maybeSingle();
+      return { ...data, clan: clan || null };
     },
     enabled: !!user?.id && !myClan,
+    refetchInterval: 15000,
   });
   const { data: pendingCount = 0 } = useQuery({
     queryKey: ['clan-requests-count', myClan?.id],
@@ -382,9 +407,9 @@ export default function Clans() {
   const handleAcceptInvite = async () => {
     if (!pendingInvite) return;
     try {
-      const { error } = await supabase.from('clan_members').insert({ clan_id: pendingInvite.related_id, user_id: user.id, role: 'member' });
+      const { error } = await supabase.from('clan_members').insert({ clan_id: pendingInvite.clan_id, user_id: user.id, role: 'member' });
       if (error) { toast.error(error.code === '23505' ? 'Already in a clan' : error.message); return; }
-      await supabase.from('notifications').update({ read: true }).eq('id', pendingInvite.id);
+      await supabase.from('clan_join_requests').update({ status: 'accepted' }).eq('id', pendingInvite.id);
       toast.success(`Joined ${pendingInvite.clan?.name || 'the clan'}!`);
       queryClient.invalidateQueries(['my-clan-membership', user?.id]);
       queryClient.invalidateQueries(['clan-invite', user?.id]);
@@ -393,7 +418,7 @@ export default function Clans() {
 
   const handleDeclineInvite = async () => {
     if (!pendingInvite) return;
-    await supabase.from('notifications').update({ read: true }).eq('id', pendingInvite.id);
+    await supabase.from('clan_join_requests').update({ status: 'rejected' }).eq('id', pendingInvite.id);
     toast.success('Invite declined');
     queryClient.invalidateQueries(['clan-invite', user?.id]);
   };

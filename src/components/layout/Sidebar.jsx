@@ -1,12 +1,11 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Wallet, Swords, Trophy, Settings, ChevronLeft, ChevronRight, LogOut, Zap, Users, Bell, Star, BookOpen, Target, Shield, TrendingUp, GraduationCap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { notificationsApi } from '@/api/supabaseClient';
 import { useTutorial } from '@/lib/TutorialContext';
-import { BarChart2 } from 'lucide-react';
+import { LayoutDashboard, Wallet, Swords, Trophy, Settings, ChevronLeft, ChevronRight, LogOut, Zap, Users, Bell, Star, BookOpen, Target, Shield, TrendingUp, GraduationCap, Paintbrush, CreditCard, BarChart2, NotebookPen } from 'lucide-react';
 
 const PRIMARY_NAV = [
   { path: '/Dashboard', icon: LayoutDashboard, label: 'Dashboard', description: 'Your hub',      tutorialId: 'nav-dashboard' },
@@ -23,6 +22,9 @@ const COMMUNITY_NAV = [
 const EXPLORE_NAV = [
   { path: '/GoalGuide', icon: Target, label: 'Goal Guide', tutorialId: null },
   { path: '/StockMarket', icon: BarChart2, label: 'Stock Market', tutorialId: null },
+  { path: '/Packs', icon: CreditCard, label: 'Store', tutorialId: null },
+  { path: '/Customize', icon: Paintbrush, label: 'Customize', tutorialId: null },
+  { path: '/Diary', icon: NotebookPen, label: 'Diary', tutorialId: null },
 ];
 
 /* ── Design tokens ── */

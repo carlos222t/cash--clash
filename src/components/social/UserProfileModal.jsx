@@ -49,6 +49,38 @@ const BADGE_LABELS = {
   godly:           { label: 'GODLY'           },
 };
 
+/* ── Profile UI color resolvers ── */
+const CARD_BG_MAP = {
+  default:  '#FFFFFF', cream: '#FFF8F0', slate: '#F1F5F9', blush: '#FFF0F3',
+  mint: '#F0FFF4', lavender: '#F5F0FF', charcoal: '#1C1C22', navy: '#0F1C2E',
+};
+const CHALLENGE_BTN_MAP = {
+  green:  { bg: '#22C55E', text: '#fff' }, gold:   { bg: '#B8973A', text: '#fff' },
+  ember:  { bg: '#E74C3C', text: '#fff' }, ocean:  { bg: '#3B82F6', text: '#fff' },
+  violet: { bg: '#8B5CF6', text: '#fff' }, rose:   { bg: '#E8748A', text: '#fff' },
+  onyx:   { bg: '#2C2C35', text: '#fff' }, white:  { bg: '#FFFFFF', text: '#111' },
+};
+const FRIEND_BTN_MAP = {
+  default: { bg: '#F3F4F6', text: '#374151' }, gold:   { bg: '#B8973A', text: '#fff' },
+  ocean:   { bg: '#3B82F6', text: '#fff'    }, forest: { bg: '#22C55E', text: '#fff' },
+  violet:  { bg: '#8B5CF6', text: '#fff'    }, rose:   { bg: '#E8748A', text: '#fff' },
+  slate:   { bg: '#64748B', text: '#fff'    }, onyx:   { bg: '#2C2C35', text: '#fff' },
+};
+const STAT_CARD_MAP = {
+  default: { bg: '#F9F5EB', border: 'rgba(184,151,58,0.15)', icon: '#B8973A', dark: false },
+  ocean:   { bg: '#EFF6FF', border: 'rgba(59,130,246,0.2)',  icon: '#3B82F6', dark: false },
+  forest:  { bg: '#F0FDF4', border: 'rgba(34,197,94,0.2)',   icon: '#22C55E', dark: false },
+  violet:  { bg: '#F5F3FF', border: 'rgba(139,92,246,0.2)',  icon: '#8B5CF6', dark: false },
+  rose:    { bg: '#FFF1F2', border: 'rgba(232,116,138,0.2)', icon: '#E8748A', dark: false },
+  ember:   { bg: '#FFF5F5', border: 'rgba(231,76,60,0.2)',   icon: '#E74C3C', dark: false },
+  dark:    { bg: '#1C1C22', border: 'rgba(255,255,255,0.08)',icon: '#B8973A', dark: true  },
+  copper:  { bg: '#FFF7ED', border: 'rgba(192,120,64,0.2)',  icon: '#C07840', dark: false },
+};
+function resolveCardBg(id)       { return CARD_BG_MAP[id]     || '#FFFFFF'; }
+function resolveChallBtn(id)     { return CHALLENGE_BTN_MAP[id] || CHALLENGE_BTN_MAP.green; }
+function resolveFriendBtn(id)    { return FRIEND_BTN_MAP[id]   || FRIEND_BTN_MAP.default; }
+function resolveStatCard(id)     { return STAT_CARD_MAP[id]    || STAT_CARD_MAP.default; }
+
 function BadgeImg({ badgeId, label, size = 40, onClick }) {
   const fileName = label.toLowerCase().replace(/\s+/g, '.') + '.png';
   return (
@@ -80,6 +112,17 @@ export default function UserProfileModal({ profile, onClose, currentUserId, myPr
   const navigate = useNavigate();
   const godly = isGodly(profile);
   const level = getLevelFromXP(profile?.xp || 0);
+
+  // Resolve saved UI colors
+  const cardBg   = resolveCardBg(profile?.card_bg_color);
+  const challBtn = resolveChallBtn(profile?.challenge_btn_color);
+  const friendBtn = resolveFriendBtn(profile?.friend_btn_color);
+  const statCard = resolveStatCard(profile?.stat_card_color);
+  const statText = statCard.dark ? "#F0EDE6" : "#111827";
+  const statSub  = statCard.dark ? "rgba(240,237,230,0.55)" : "#6B7280";
+  const isDarkCard = ['charcoal','navy','dark'].includes(profile?.card_bg_color);
+  const cardText   = isDarkCard ? '#F0EDE6'              : undefined; // undefined = inherit Tailwind
+  const cardSub    = isDarkCard ? 'rgba(240,237,230,0.55)' : undefined;
 
   useEffect(() => {
     if (currentUserId && profile?.created_by) {
@@ -124,15 +167,15 @@ export default function UserProfileModal({ profile, onClose, currentUserId, myPr
   return (
     <>
       <Dialog open onOpenChange={onClose}>
-        <DialogContent className="max-w-sm p-0 overflow-hidden">
+        <DialogContent className="max-w-sm p-0 overflow-hidden" style={{ background: '#0C0C0E', border: '1px solid rgba(184,151,58,0.25)', borderRadius: 20 }}>
 
           {godly ? (
-            <div className="relative h-16 overflow-hidden flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #7A4900, #FFD700, #FFA500, #FFD700, #7A4900)', backgroundSize: '300% 300%' }}>
-              <p className="text-xs font-black tracking-[0.3em] text-amber-900/80 uppercase z-10">✨ Godly Player ✨</p>
+            <div className="relative overflow-hidden flex items-center justify-center" style={{ height: 56, background: 'linear-gradient(135deg, #3a2000, #B8973A, #FFD700, #B8973A, #3a2000)', backgroundSize: '300% 300%' }}>
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)' }} />
+              <p style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.35em', color: '#7A4900', textTransform: 'uppercase', zIndex: 10, position: 'relative' }}>KING</p>
             </div>
           ) : (
-            <div className="h-3 bg-gradient-to-r from-primary/30 via-accent/20 to-primary/30" />
+            <div style={{ height: 3, background: 'linear-gradient(90deg, transparent, rgba(184,151,58,0.6), transparent)' }} />
           )}
 
           <div className="px-5 pt-4 pb-5">
@@ -159,7 +202,7 @@ export default function UserProfileModal({ profile, onClose, currentUserId, myPr
               )}
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <h2 className="font-heading font-bold text-lg leading-tight truncate">{profile?.display_name}</h2>
+                  <h2 className="font-heading font-bold text-lg leading-tight truncate" style={cardText ? { color: cardText } : {}}>{profile?.display_name}</h2>
                   <img
                     src={getRankImg(level)}
                     alt="rank"
@@ -169,12 +212,12 @@ export default function UserProfileModal({ profile, onClose, currentUserId, myPr
                   />
                   {godly && <GodlyBadgePill />}
                 </div>
-                <p className="text-sm text-muted-foreground">@{profile?.username}</p>
+                <p className="text-sm" style={{ color: 'rgba(240,237,230,0.5)' }}>@{profile?.username}</p>
               </div>
             </div>
 
             {profile?.bio && (
-              <p className="text-sm text-muted-foreground italic mb-4">"{profile.bio}"</p>
+              <p className="text-sm italic mb-4" style={{ color: 'rgba(240,237,230,0.45)' }}>"{profile.bio}"</p>
             )}
 
             {/* Rank progression panel (expandable) */}
@@ -235,21 +278,16 @@ export default function UserProfileModal({ profile, onClose, currentUserId, myPr
               )}
             </div>
 
-            {/* Stats */}
+
             <div className="grid grid-cols-3 gap-2 mb-4">
-              {[
-                { icon: Zap,    label: 'Level',       value: profile?.level || 1 },
-                { icon: Star,   label: 'XP',          value: (profile?.xp || 0).toLocaleString() },
-                { icon: Swords, label: 'Battles Won', value: profile?.battles_won || 0 },
-              ].map(stat => (
-                <div key={stat.label} className={`rounded-xl p-2.5 text-center ${godly ? 'bg-yellow-500/10 border border-yellow-500/20' : 'bg-muted'}`}>
-                  <stat.icon className={`w-4 h-4 mx-auto mb-1 ${godly ? 'text-yellow-500' : 'text-primary'}`} />
-                  <p className="font-bold text-sm font-heading">{stat.value}</p>
-                  <p className="text-[10px] text-muted-foreground">{stat.label}</p>
+              {[{icon:Zap,label:'Level',value:profile?.level||1},{icon:Star,label:'XP',value:(profile?.xp||0).toLocaleString()},{icon:Swords,label:'Battles Won',value:profile?.battles_won||0}].map(stat=>(
+                <div key={stat.label} style={{background:'#16161A',borderRadius:12,padding:'10px',textAlign:'center',border:'1px solid rgba(184,151,58,0.15)'}}>
+                  <stat.icon style={{width:16,height:16,margin:'0 auto 4px',display:'block',color:'#B8973A'}}/>
+                  <p style={{fontWeight:700,fontSize:14,color:'#F0EDE6',margin:'2px 0 0'}}>{stat.value}</p>
+                  <p style={{fontSize:10,color:'rgba(240,237,230,0.45)',margin:0}}>{stat.label}</p>
                 </div>
               ))}
             </div>
-
             {/* Badges — image grid */}
             {profile?.badges?.length > 0 && (
               <div className="mb-4">
@@ -274,17 +312,23 @@ export default function UserProfileModal({ profile, onClose, currentUserId, myPr
 
             {/* Clan */}
             {clan && (
-              <div className="mb-4 flex items-center gap-3 bg-muted/50 rounded-xl p-3">
-                <div
-                  className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xl overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => setEnlargedImage({ src: clan.avatar_url, emoji: clan.avatar_emoji || '🛡️' })}
-                >
-                  {clan.avatar_url ? <img src={clan.avatar_url} alt="clan" className="w-full h-full object-cover" /> : <span>{clan.avatar_emoji || '🛡️'}</span>}
+              <div
+                className="mb-4"
+                onClick={() => { onClose(); navigate('/Clans', { state: { clanId: clan.id } }); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(135deg, rgba(184,151,58,0.08), rgba(184,151,58,0.04))', border: '1px solid rgba(184,151,58,0.2)', borderRadius: 14, padding: '12px 14px', cursor: 'pointer', transition: 'border-color 0.15s, background 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(184,151,58,0.45)'; e.currentTarget.style.background = 'rgba(184,151,58,0.12)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(184,151,58,0.2)'; e.currentTarget.style.background = 'linear-gradient(135deg, rgba(184,151,58,0.08), rgba(184,151,58,0.04))'; }}
+              >
+                <div style={{ width: 42, height: 42, borderRadius: 12, border: '1.5px solid rgba(184,151,58,0.35)', background: 'rgba(184,151,58,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, overflow: 'hidden', flexShrink: 0 }}>
+                  {clan.avatar_url ? <img src={clan.avatar_url} alt="clan" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span>{clan.avatar_emoji || '🛡️'}</span>}
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground flex items-center gap-1"><Shield className="w-3 h-3" /> Clan</p>
-                  <p className="text-sm font-semibold truncate">{clan.name}</p>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <p style={{ margin: 0, fontSize: 10, color: 'rgba(184,151,58,0.7)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Shield style={{ width: 10, height: 10 }} /> Clan
+                  </p>
+                  <p style={{ margin: '2px 0 0', fontSize: 13, fontWeight: 700, color: '#F0EDE6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{clan.name}</p>
                 </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(184,151,58,0.5)" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
               </div>
             )}
 
@@ -293,21 +337,34 @@ export default function UserProfileModal({ profile, onClose, currentUserId, myPr
               <div className="flex gap-2">
                 {isFriend ? (
                   <>
-                    <Button variant="secondary" className="flex-1 gap-2" disabled>
-                      <UserCheck className="w-4 h-4" /> Friends
-                    </Button>
-                    <Button className="flex-1 gap-2" onClick={handleChallenge}>
-                      <Swords className="w-4 h-4" /> Challenge
-                    </Button>
+                    <button
+                      disabled
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', borderRadius: 10, background: friendBtn.bg, color: friendBtn.text, fontSize: 13, fontWeight: 600, border: 'none', opacity: 0.7, cursor: 'not-allowed' }}
+                    >
+                      <UserCheck style={{ width: 16, height: 16 }} /> Friends
+                    </button>
+                    <button
+                      onClick={handleChallenge}
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', borderRadius: 10, background: challBtn.bg, color: challBtn.text, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}
+                    >
+                      <Swords style={{ width: 16, height: 16 }} /> Challenge
+                    </button>
                   </>
                 ) : isPending ? (
-                  <Button variant="outline" className="flex-1 gap-2" disabled>
-                    <UserCheck className="w-4 h-4" /> Request Sent
-                  </Button>
+                  <button
+                    disabled
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', borderRadius: 10, background: 'rgba(184,151,58,0.12)', color: '#B8973A', fontSize: 13, fontWeight: 600, border: '1px solid rgba(184,151,58,0.3)', opacity: 1, cursor: 'not-allowed' }}
+                  >
+                    <UserCheck style={{ width: 16, height: 16 }} /> Requested
+                  </button>
                 ) : (
-                  <Button onClick={handleAddFriend} className="flex-1 gap-2" disabled={loading}>
-                    <UserPlus className="w-4 h-4" /> Add Friend
-                  </Button>
+                  <button
+                    onClick={handleAddFriend}
+                    disabled={loading}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', borderRadius: 10, background: loading ? 'rgba(184,151,58,0.12)' : friendBtn.bg, color: loading ? '#B8973A' : friendBtn.text, fontSize: 13, fontWeight: 600, border: loading ? '1px solid rgba(184,151,58,0.3)' : 'none', cursor: loading ? 'not-allowed' : 'pointer', opacity: 1, transition: 'all 0.2s' }}
+                  >
+                    <UserPlus style={{ width: 16, height: 16 }} /> {loading ? 'Sending...' : 'Add Friend'}
+                  </button>
                 )}
               </div>
             )}
