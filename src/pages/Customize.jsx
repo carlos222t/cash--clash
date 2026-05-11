@@ -550,7 +550,7 @@ export default function Customize() {
                       </button>
                     )}
                   </div>
-                  <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+                  <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
                     onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0])} />
                 </div>
               </div>

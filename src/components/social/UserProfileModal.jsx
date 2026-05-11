@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { friendsApi, notificationsApi } from '@/api/supabaseClient';
+import { friendsApi, notificationsApi, profilesApi } from '@/api/supabaseClient';
 import { supabase } from '@/api/supabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -103,7 +103,8 @@ function BadgeImg({ badgeId, label, size = 40, onClick }) {
   );
 }
 
-export default function UserProfileModal({ profile, onClose, currentUserId, myProfile }) {
+export default function UserProfileModal({ profile: initialProfile, onClose, currentUserId, myProfile }) {
+  const [profile, setProfile] = useState(initialProfile);
   const [relationship, setRelationship] = useState(null);
   const [loading, setLoading] = useState(false);
   const [enlargedImage, setEnlargedImage] = useState(null);
@@ -125,8 +126,14 @@ export default function UserProfileModal({ profile, onClose, currentUserId, myPr
   const cardSub    = isDarkCard ? 'rgba(240,237,230,0.55)' : undefined;
 
   useEffect(() => {
-    if (currentUserId && profile?.created_by) {
-      friendsApi.getRelationship(currentUserId, profile.created_by).then(setRelationship);
+    // Always re-fetch fresh profile so customizations are up to date
+    if (initialProfile?.created_by) {
+      profilesApi.getByUserId(initialProfile.created_by)
+        .then(fresh => { if (fresh) setProfile(fresh); })
+        .catch(() => {});
+    }
+    if (currentUserId && initialProfile?.created_by) {
+      friendsApi.getRelationship(currentUserId, initialProfile.created_by).then(setRelationship);
     }
     if (profile?.created_by) {
       supabase.from('clan_members').select('*, clan:clans(*)').eq('user_id', profile.created_by).maybeSingle()
