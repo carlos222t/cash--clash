@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
   Settings as SettingsIcon, User, Camera, Save, LogOut,
-  Shield, Palette, RefreshCw, CheckCircle2, AtSign, Globe, X, Ban, UserX, Swords,
+  Shield, Palette, RefreshCw, CheckCircle2, AtSign, Globe, X, Ban, UserX,
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -235,9 +235,6 @@ export default function Settings() {
   const [newUsername,       setNewUsername]       = useState('');
   const [usernameChanges,   setUsernameChanges]   = useState([]);
   const [savingUsername,    setSavingUsername]     = useState(false);
-  const [hasBank,           setHasBank]           = useState(null);
-  const [hasSavings,        setHasSavings]        = useState(null);
-  const [savingAcctPrefs,   setSavingAcctPrefs]   = useState(false);
   const [usernamePopup,     setUsernamePopup]      = useState(false);
   const queryClient    = useQueryClient();
   const originalValues = useRef({});
@@ -267,10 +264,6 @@ export default function Settings() {
       const avatar    = profile.avatar_id || 'avatar1';
       const avatarUrl = profile.custom_avatar_url || '';
       const reg       = profile.region || 'us';
-      if (profile.has_bank_account    !== undefined) setHasBank(profile.has_bank_account ?? null);
-      if (profile.has_savings_account !== undefined) setHasSavings(profile.has_savings_account ?? null);
-      setHasBank(profile.has_bank_account ?? null);
-      setHasSavings(profile.has_savings_account ?? null);
       setDisplayName(name); setUsername(uname); setBio(bioVal);
       setUsernameChanges(profile.username_changes || []);
       setSelectedAvatar(avatar); setRegion(reg);
@@ -408,7 +401,6 @@ export default function Settings() {
   const TABS = [
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'account',    label: 'Account',    icon: Shield  },
-    { id: 'clash',      label: 'Clash',      icon: Swords  },
     { id: 'blocked',    label: 'Blocked',    icon: Ban     },
   ];
 
@@ -526,60 +518,6 @@ export default function Settings() {
             )}
 
             {/* ── BLOCKED TAB ─────────────────────────────────────────── */}
-            {/* ── CLASH TAB ───────────────────────────────────────── */}
-            {activeTab === 'clash' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ background: tk.surface, border: `1px solid ${tk.border}`, borderRadius: 16, padding: 20 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-                    color: tk.muted, margin: '0 0 4px' }}>⚔️ Challenge Objectives</p>
-                  <p style={{ fontSize: 12, color: tk.muted, margin: '0 0 16px', lineHeight: 1.5 }}>
-                    Tailor your clash objectives to the accounts you have.
-                  </p>
-                  {[
-                    { key: 'bank',    label: 'I have a bank account',    val: hasBank,    set: setHasBank },
-                    { key: 'savings', label: 'I have a savings account', val: hasSavings, set: setHasSavings },
-                  ].map(({ key, label, val, set }) => (
-                    <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '12px 0', borderBottom: `1px solid ${tk.border}` }}>
-                      <span style={{ fontSize: 13, color: tk.text }}>{label}</span>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        {[true, false].map(opt => (
-                          <button key={String(opt)} onClick={() => set(opt)} style={{
-                            padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                            border: val === opt ? `1px solid ${opt ? tk.gold : 'rgba(192,57,43,0.5)'}` : `1px solid ${tk.border}`,
-                            background: val === opt ? (opt ? tk.goldDim : 'rgba(192,57,43,0.12)') : tk.surfaceHigh,
-                            color: val === opt ? (opt ? tk.gold : '#C0392B') : tk.muted,
-                            transition: 'all 0.15s',
-                          }}>{opt ? 'Yes' : 'No'}</button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                  <button
-                    onClick={async () => {
-                      setSavingAcctPrefs(true);
-                      try {
-                        const prof = await profilesApi.getByUserId(user.id);
-                        if (prof) {
-                          await entities.UserProfile.update(prof.id, {
-                            has_bank_account: hasBank, has_savings_account: hasSavings,
-                          });
-                          toast.success('Preferences saved!');
-                        }
-                      } catch(e) { toast.error('Failed to save'); }
-                      finally { setSavingAcctPrefs(false); }
-                    }}
-                    disabled={savingAcctPrefs || hasBank === null || hasSavings === null}
-                    style={{ marginTop: 14, width: '100%', padding: '11px', borderRadius: 10, border: 'none',
-                      background: (hasBank !== null && hasSavings !== null) ? `linear-gradient(135deg, ${tk.gold}, ${tk.goldLight})` : tk.surfaceHigh,
-                      color: (hasBank !== null && hasSavings !== null) ? '#0C0C0E' : tk.muted,
-                      fontWeight: 700, fontSize: 13,
-                      cursor: (savingAcctPrefs || hasBank === null || hasSavings === null) ? 'not-allowed' : 'pointer' }}
-                  >{savingAcctPrefs ? 'Saving…' : 'Save Preferences'}</button>
-                </div>
-              </div>
-            )}
-
             {activeTab === 'blocked' && (
               <BlockedUsersTab userId={user?.id} />
             )}
@@ -702,58 +640,7 @@ export default function Settings() {
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 7, fontSize: 11, fontWeight: 600, background: 'transparent', color: tk.muted, border: `1px solid ${tk.border}`, cursor: 'pointer', fontFamily: 'inherit' }}>
                   <RefreshCw style={{ width: 11, height: 11 }} /> Reset
                 </button>
-                
-        {/* ── Account Preferences ── */}
-        <div style={{ background: tk.surface, border: `1px solid ${tk.border}`, borderRadius: 16, padding: 20, marginBottom: 16 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-            color: tk.muted, margin: '0 0 4px' }}>⚔️ Challenge Objectives</p>
-          <p style={{ fontSize: 12, color: tk.muted, margin: '0 0 16px', lineHeight: 1.5 }}>
-            Tailor your clash objectives to the accounts you have.
-          </p>
-          {[
-            { key: 'bank',    label: 'I have a bank account',    val: hasBank,    set: setHasBank },
-            { key: 'savings', label: 'I have a savings account', val: hasSavings, set: setHasSavings },
-          ].map(({ key, label, val, set }) => (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '12px 0', borderBottom: `1px solid ${tk.border}` }}>
-              <span style={{ fontSize: 13, color: tk.text }}>{label}</span>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {[true, false].map(opt => (
-                  <button key={String(opt)} onClick={() => set(opt)} style={{
-                    padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                    border: val === opt ? `1px solid ${opt ? tk.gold : 'rgba(192,57,43,0.5)'}` : `1px solid ${tk.border}`,
-                    background: val === opt ? (opt ? tk.goldDim : 'rgba(192,57,43,0.12)') : tk.surfaceHigh,
-                    color: val === opt ? (opt ? tk.gold : '#C0392B') : tk.muted,
-                    transition: 'all 0.15s',
-                  }}>{opt ? 'Yes' : 'No'}</button>
-                ))}
-              </div>
-            </div>
-          ))}
-          <button
-            onClick={async () => {
-              setSavingAcctPrefs(true);
-              try {
-                const prof = await profilesApi.getByUserId(user.id);
-                if (prof) {
-                  await entities.UserProfile.update(prof.id, {
-                    has_bank_account: hasBank, has_savings_account: hasSavings,
-                  });
-                  toast.success('Preferences saved!');
-                }
-              } catch(e) { toast.error('Failed to save'); }
-              finally { setSavingAcctPrefs(false); }
-            }}
-            disabled={savingAcctPrefs || hasBank === null || hasSavings === null}
-            style={{ marginTop: 14, width: '100%', padding: '11px', borderRadius: 10, border: 'none',
-              background: (hasBank !== null && hasSavings !== null) ? `linear-gradient(135deg, ${tk.gold}, ${tk.goldLight})` : tk.surfaceHigh,
-              color: (hasBank !== null && hasSavings !== null) ? '#0C0C0E' : tk.muted,
-              fontWeight: 700, fontSize: 13,
-              cursor: (savingAcctPrefs || hasBank === null || hasSavings === null) ? 'not-allowed' : 'pointer' }}
-          >{savingAcctPrefs ? 'Saving…' : 'Save Preferences'}</button>
-        </div>
-
-<button onClick={handleSaveProfile} disabled={isSaving}
+                <button onClick={handleSaveProfile} disabled={isSaving}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', background: tk.gold, color: tk.dark, border: 'none', cursor: 'pointer', transition: 'background 0.15s', fontFamily: 'inherit', opacity: isSaving ? 0.7 : 1 }}>
                   {isSaving
                     ? <div style={{ width: 11, height: 11, border: `2px solid rgba(12,12,14,0.3)`, borderTopColor: tk.dark, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />

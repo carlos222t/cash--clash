@@ -435,11 +435,6 @@ export default function Customize() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse-gold { 0%,100% { box-shadow: 0 0 0 0 rgba(184,151,58,0.3); } 50% { box-shadow: 0 0 0 6px rgba(184,151,58,0); } }
         ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
-        @media (max-width: 640px) {
-          .customize-grid { display: flex !important; flex-direction: column !important; }
-          .customize-preview { position: static !important; order: -1; }
-          .customize-forms { order: 1; }
-        }
       `}</style>
 
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
@@ -493,10 +488,10 @@ export default function Customize() {
         </motion.div>
 
         {/* ── Two-column layout ── */}
-        <div className="customize-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
 
           {/* LEFT: forms */}
-          <div className="customize-forms" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
             {/* Identity */}
             <Section icon={User} title="Identity">
@@ -686,7 +681,7 @@ export default function Customize() {
           </div>
 
           {/* RIGHT: live preview (sticky) */}
-          <div className="customize-preview" style={{ position: 'sticky', top: 24 }}>
+          <div style={{ position: 'sticky', top: 24 }}>
             <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
               <div style={{ marginBottom: 10 }}>
                 <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.textMuted, display: 'flex', alignItems: 'center', gap: 6 }}>

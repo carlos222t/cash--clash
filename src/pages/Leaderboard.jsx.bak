@@ -315,11 +315,11 @@ export default function Leaderboard() {
 
         {/* ── TABS ─────────────────────────────────────────────────────────── */}
         <Tabs defaultValue="xp">
-          <TabsList style={{ width: '100%', display: 'flex', padding: '3px', gap: 2 }}>
-            <TabsTrigger value="xp"          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', padding: '6px 4px', whiteSpace: 'nowrap' }}><Star   style={{ width: 11, height: 11, flexShrink: 0 }} /> XP</TabsTrigger>
-            <TabsTrigger value="battles"     style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', padding: '6px 4px', whiteSpace: 'nowrap' }}><Swords style={{ width: 11, height: 11, flexShrink: 0 }} /> Battles</TabsTrigger>
-            <TabsTrigger value="tournaments" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', padding: '6px 4px', whiteSpace: 'nowrap' }}><Trophy style={{ width: 11, height: 11, flexShrink: 0 }} /> Tourneys</TabsTrigger>
-            <TabsTrigger value="clans"       style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', padding: '6px 4px', whiteSpace: 'nowrap' }}><Shield style={{ width: 11, height: 11, flexShrink: 0 }} /> Clans</TabsTrigger>
+          <TabsList style={{ width: '100%', display: 'flex' }}>
+            <TabsTrigger value="xp"          style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}><Star   style={{ width: 13, height: 13 }} /> Most XP</TabsTrigger>
+            <TabsTrigger value="battles"     style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}><Swords style={{ width: 13, height: 13 }} /> Battles Won</TabsTrigger>
+            <TabsTrigger value="tournaments" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}><Trophy style={{ width: 13, height: 13 }} /> Tournaments</TabsTrigger>
+            <TabsTrigger value="clans"       style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}><Shield style={{ width: 13, height: 13 }} /> Clans</TabsTrigger>
           </TabsList>
 
           <TabsContent value="xp"          style={{ marginTop: 16 }}>{renderList(byXP,         'xp',              'XP',   Star)}</TabsContent>

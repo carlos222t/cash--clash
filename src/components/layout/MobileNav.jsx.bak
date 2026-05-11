@@ -11,12 +11,14 @@ const NAV_ITEMS = [
   { path: '/Challenges',  icon: Swords,          label: 'Clash'       },
   { path: '/Friends',     icon: Users,           label: 'Friends'     },
   { path: '/Inbox',       icon: Bell,            label: 'Inbox',  badge: true },
-  { path: '/GoalGuide',   icon: Target,          label: 'Goals'       },
+  { path: '/Goals',       icon: Target,          label: 'Goals'       },
   { path: '/Clans',       icon: Shield,          label: 'Clans'       },
   { path: '/Leaderboard', icon: Trophy,          label: 'Ranks'       },
+  { path: '/StockMarket', icon: BarChart2,        label: 'Markets'     },
   { path: '/Packs',       icon: CreditCard,      label: 'Store'       },
   { path: '/Customize',   icon: Paintbrush,      label: 'Customize'   },
-  { path: '/Diary',       icon: NotebookPen,     label: 'Diary'       },
+  { path: '/Learn',       icon: GraduationCap,   label: 'Learn'       },
+  { path: '/Diary',        icon: NotebookPen,     label: 'Diary'       },
   { path: '/Settings',    icon: Settings,        label: 'Settings'    },
 ];
 

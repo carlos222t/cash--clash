@@ -383,13 +383,12 @@ function pickNFrom(arr, n) {
   return shuffled.slice(0, n);
 }
 
-function generateRushTasks(hasBank = true, hasSavings = true) {
-  const all = Object.entries(CHALLENGE_POOL).flatMap(([cat, tasks]) => {
-    if (cat === 'bank_account'    && !hasBank)    return [];
-    if (cat === 'savings_account' && !hasSavings) return [];
-    return tasks.map(t => ({ ...t, category: cat, completed_by: [], proof_urls: {} }));
-  });
-  return pickNFrom(all, Math.min(10, all.length));
+function generateRushTasks() {
+  // Gather all tasks from all categories, then pick 10 at random
+  const all = Object.entries(CHALLENGE_POOL).flatMap(([cat, tasks]) =>
+    tasks.map(t => ({ ...t, category: cat, completed_by: [], proof_urls: {} }))
+  );
+  return pickNFrom(all, 10);
 }
 
 // ── HYSA QUIZ COMPONENT ────────────────────────────────────────────────────
@@ -1694,7 +1693,7 @@ function CreateTournamentDialog({ open, onClose, user, myProfile, friendProfiles
           p2_id: shuffled[i*2+1].userId, p2_username: shuffled[i*2+1].username,
           winner_id: null, winner_username: null,
           challenge_id: null, status: 'active',
-          tasks: generateRushTasks(hasBank !== false, hasSavings !== false),
+          tasks: generateRushTasks(),
         });
       }
       const tournament = await entities.Tournament.create({
@@ -1881,9 +1880,6 @@ export default function Challenges() {
   const [myProfile, setMyProfile] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [howOpen, setHowOpen] = useState(false);
-  const [hasBank,       setHasBank]       = useState(null);
-  const [hasSavings,    setHasSavings]    = useState(null);
-  const [onboardDone,   setOnboardDone]   = useState(true);
   const [gameMode, setGameMode] = useState('savings');
   const [form, setForm] = useState({ title: '', opponent_username: '', savings_goal: '' });
   const [searching, setSearching] = useState(false);
@@ -1896,18 +1892,7 @@ export default function Challenges() {
   useEffect(() => {
     auth.me().then(u => {
       setUser(u);
-      profilesApi.getByUserId(u.id).then(p => {
-        setMyProfile(p);
-        if (p && p.has_bank_account !== null && p.has_bank_account !== undefined
-              && p.has_savings_account !== null && p.has_savings_account !== undefined) {
-          setHasBank(p.has_bank_account);
-          setHasSavings(p.has_savings_account);
-          setOnboardDone(true);
-        } else {
-          // prefs not set yet — show the onboarding modal
-          setOnboardDone(false);
-        }
-      }).catch(() => {});
+      profilesApi.getByUserId(u.id).then(setMyProfile).catch(() => {});
     }).catch(() => {});
   }, []);
 
@@ -1972,7 +1957,7 @@ export default function Challenges() {
       const weekEnd   = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 7);
 
-      const rushTasks = gameMode === 'rush' ? generateRushTasks(hasBank !== false, hasSavings !== false) : null;
+      const rushTasks = gameMode === 'rush' ? generateRushTasks() : null;
 
       await entities.Challenge.create({
         title: form.title,
@@ -2226,7 +2211,7 @@ export default function Challenges() {
       const nextMatchIndex = Math.ceil(match.match / 2);
       let nextMatch = bracket.find(m => m.round === nextRound && m.match === nextMatchIndex);
       if (!nextMatch) {
-        nextMatch = { round: nextRound, match: nextMatchIndex, p1_id: null, p1_username: null, p2_id: null, p2_username: null, winner_id: null, winner_username: null, status: 'pending', tasks: generateRushTasks(hasBank !== false, hasSavings !== false) };
+        nextMatch = { round: nextRound, match: nextMatchIndex, p1_id: null, p1_username: null, p2_id: null, p2_username: null, winner_id: null, winner_username: null, status: 'pending', tasks: generateRushTasks() };
         bracket.push(nextMatch);
       }
       if (match.match % 2 === 1) {
@@ -2482,83 +2467,6 @@ export default function Challenges() {
     </div>
   );
 
-  const saveAccountPrefs = async (bank, savings) => {
-    setHasBank(bank); setHasSavings(savings); setOnboardDone(true);
-    if (user) {
-      try {
-        const prof = await profilesApi.getByUserId(user.id);
-        if (prof) await entities.UserProfile.update(prof.id, {
-          has_bank_account: bank, has_savings_account: savings,
-        });
-      } catch(e) { console.error(e); }
-    }
-  };
-
-  const OnboardingModal = () => (
-    <div style={{ position:'fixed', inset:0, zIndex:2000,
-      background:'rgba(0,0,0,0.88)', backdropFilter:'blur(6px)',
-      display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
-      <div style={{ background:T.surface, border:`1px solid ${T.goldBorder}`,
-        borderRadius:20, padding:28, maxWidth:400, width:'100%' }}>
-        <p style={{ fontSize:10, fontWeight:700, letterSpacing:'0.12em',
-          textTransform:'uppercase', color:T.gold, margin:'0 0 6px' }}>Before Your First Clash</p>
-        <h2 style={{ fontSize:22, fontWeight:800, color:T.text, margin:'0 0 8px',
-          fontFamily:"'Cormorant Garamond', serif" }}>Tell us about your accounts</h2>
-        <p style={{ fontSize:12, color:T.textMuted, margin:'0 0 24px', lineHeight:1.6 }}>
-          We'll tailor your clash objectives to match what you actually have.
-          You can change this anytime in Settings.
-        </p>
-        {hasBank === null ? (<>
-          <p style={{ fontSize:14, fontWeight:700, color:T.text, margin:'0 0 14px' }}>Do you have a bank account?</p>
-          <div style={{ display:'flex', gap:10 }}>
-            <button onClick={() => setHasBank(true)} style={{ flex:1, padding:'13px', borderRadius:10,
-              border:`1px solid ${T.goldBorder}`, background:T.goldDim, color:T.gold,
-              fontWeight:700, fontSize:14, cursor:'pointer' }}>✓ Yes</button>
-            <button onClick={() => setHasBank(false)} style={{ flex:1, padding:'13px', borderRadius:10,
-              border:`1px solid ${T.border}`, background:T.surfaceHigh, color:T.textMuted,
-              fontWeight:700, fontSize:14, cursor:'pointer' }}>✗ No</button>
-          </div>
-        </>) : hasSavings === null ? (<>
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:18,
-            padding:'8px 12px', borderRadius:9, background:T.surfaceHigh, border:`1px solid ${T.border}` }}>
-            <span style={{ fontSize:12, color:T.textMuted }}>Bank account:</span>
-            <span style={{ fontSize:12, fontWeight:700, color: hasBank ? T.success : T.danger }}>{hasBank ? '✓ Yes' : '✗ No'}</span>
-            <button onClick={() => setHasBank(null)} style={{ marginLeft:'auto', background:'none',
-              border:'none', color:T.textDim, fontSize:11, cursor:'pointer', textDecoration:'underline' }}>change</button>
-          </div>
-          <p style={{ fontSize:14, fontWeight:700, color:T.text, margin:'0 0 14px' }}>Do you have a savings account?</p>
-          <div style={{ display:'flex', gap:10 }}>
-            <button onClick={() => setHasSavings(true)} style={{ flex:1, padding:'13px', borderRadius:10,
-              border:`1px solid ${T.goldBorder}`, background:T.goldDim, color:T.gold,
-              fontWeight:700, fontSize:14, cursor:'pointer' }}>✓ Yes</button>
-            <button onClick={() => setHasSavings(false)} style={{ flex:1, padding:'13px', borderRadius:10,
-              border:`1px solid ${T.border}`, background:T.surfaceHigh, color:T.textMuted,
-              fontWeight:700, fontSize:14, cursor:'pointer' }}>✗ No</button>
-          </div>
-        </>) : (<>
-          <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:22 }}>
-            {[{label:'Bank account',val:hasBank},{label:'Savings account',val:hasSavings}].map(({label,val})=>(
-              <div key={label} style={{ display:'flex', justifyContent:'space-between',
-                padding:'10px 12px', borderRadius:9, background:T.surfaceHigh, border:`1px solid ${T.border}` }}>
-                <span style={{ fontSize:12, color:T.textMuted }}>{label}</span>
-                <span style={{ fontSize:12, fontWeight:700, color: val ? T.success : T.danger }}>{val ? '✓ Yes' : '✗ No'}</span>
-              </div>
-            ))}
-          </div>
-          <div style={{ display:'flex', gap:10 }}>
-            <button onClick={() => { setHasBank(null); setHasSavings(null); }} style={{
-              flex:1, padding:'12px', borderRadius:10, background:'transparent',
-              border:`1px solid ${T.border}`, color:T.textMuted, fontWeight:600, fontSize:13, cursor:'pointer' }}>← Back</button>
-            <button onClick={() => saveAccountPrefs(hasBank, hasSavings)} style={{
-              flex:2, padding:'12px', borderRadius:10, border:'none',
-              background:`linear-gradient(135deg, ${T.gold}, ${T.goldLight})`,
-              color:'#0C0C0E', fontWeight:800, fontSize:14, cursor:'pointer' }}>Start Clashing →</button>
-          </div>
-        </>)}
-      </div>
-    </div>
-  );
-
   return (
     <div style={{
       minHeight: '100vh',
@@ -2567,7 +2475,6 @@ export default function Challenges() {
       fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
       padding: '24px 24px 80px',
     }}>
-      {!onboardDone && user && <OnboardingModal />}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Cormorant+Garamond:wght@600;700&display=swap');
 

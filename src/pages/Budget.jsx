@@ -509,25 +509,50 @@ export default function Budget() {
         </AnimatePresence>
 
         {/* ── MAIN GRID ──────────────────────────────────────────────────── */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 16,
-        }}>
-          {/* Transaction list — 2/3 width */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* 1. AUTO TRANSACTIONS */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.08 }}
             style={{
-              gridColumn: 'span 2',
               borderRadius: 14,
               background: tokens.surfaceAlt,
               border: `1px solid ${tokens.border}`,
               overflow: 'hidden',
             }}
           >
-            {/* Section tabs */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '14px 18px 12px',
+              borderBottom: `1px solid ${tokens.border}`,
+            }}>
+              <RefreshCw style={{ width: 14, height: 14, color: tokens.gold }} />
+              <span style={{
+                fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
+                textTransform: 'uppercase', color: tokens.textMuted,
+              }}>Auto Transactions</span>
+            </div>
+            <AutoTransactions
+              autoList={profile?.auto_transactions || []}
+              onAdd={handleAddAuto}
+              onDelete={handleDeleteAuto}
+            />
+          </motion.div>
+
+          {/* 2. TRANSACTIONS + SAVINGS tabs */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.12 }}
+            style={{
+              borderRadius: 14,
+              background: tokens.surfaceAlt,
+              border: `1px solid ${tokens.border}`,
+              overflow: 'hidden',
+            }}
+          >
             <div style={{
               display: 'flex', alignItems: 'center', gap: 0,
               padding: '10px 14px 0',
@@ -568,59 +593,32 @@ export default function Budget() {
             }
           </motion.div>
 
-          {/* Sidebar — 1/3 width */}
+          {/* 3. BUDGET PLANNER */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.14 }}
-            style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+            transition={{ delay: 0.16 }}
+            style={{
+              borderRadius: 14,
+              background: tokens.surfaceAlt,
+              border: `1px solid ${tokens.border}`,
+              overflow: 'hidden',
+            }}
           >
-            {/* Auto Transactions */}
             <div style={{
-              borderRadius: 14,
-              background: tokens.surfaceAlt,
-              border: `1px solid ${tokens.border}`,
-              overflow: 'hidden',
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '14px 18px 12px',
+              borderBottom: `1px solid ${tokens.border}`,
             }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '14px 18px 12px',
-                borderBottom: `1px solid ${tokens.border}`,
-              }}>
-                <RefreshCw style={{ width: 14, height: 14, color: tokens.gold }} />
-                <span style={{
-                  fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
-                  textTransform: 'uppercase', color: tokens.textMuted,
-                }}>Auto Transactions</span>
-              </div>
-              <AutoTransactions
-                autoList={profile?.auto_transactions || []}
-                onAdd={handleAddAuto}
-                onDelete={handleDeleteAuto}
-              />
+              <Calculator style={{ width: 14, height: 14, color: tokens.gold }} />
+              <span style={{
+                fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
+                textTransform: 'uppercase', color: tokens.textMuted,
+              }}>Budget Planner</span>
             </div>
-
-            {/* Budget Calculator */}
-            <div style={{
-              borderRadius: 14,
-              background: tokens.surfaceAlt,
-              border: `1px solid ${tokens.border}`,
-              overflow: 'hidden',
-            }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '14px 18px 12px',
-                borderBottom: `1px solid ${tokens.border}`,
-              }}>
-                <Calculator style={{ width: 14, height: 14, color: tokens.gold }} />
-                <span style={{
-                  fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
-                  textTransform: 'uppercase', color: tokens.textMuted,
-                }}>Budget Planner</span>
-              </div>
-              <BudgetCalculator profile={profile} onSave={handleSaveBudget} />
-            </div>
+            <BudgetCalculator profile={profile} onSave={handleSaveBudget} />
           </motion.div>
+
         </div>
       </div>
     </div>
