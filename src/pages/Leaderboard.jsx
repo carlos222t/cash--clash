@@ -415,7 +415,7 @@ export default function Leaderboard() {
       </div>
 
       {viewProfile && (
-        <UserProfileModal profile={viewProfile} onClose={() => setViewProfile(null)} currentUserId={user?.id} myProfile={myProfile} />
+        <UserProfileModal key={viewProfile?.id} profile={viewProfile} onClose={() => setViewProfile(null)} currentUserId={user?.id} myProfile={myProfile} />
       )}
     </div>
   );

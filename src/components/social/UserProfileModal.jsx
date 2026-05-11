@@ -76,6 +76,19 @@ const STAT_CARD_MAP = {
   dark:    { bg: '#1C1C22', border: 'rgba(255,255,255,0.08)',icon: '#B8973A', dark: true  },
   copper:  { bg: '#FFF7ED', border: 'rgba(192,120,64,0.2)',  icon: '#C07840', dark: false },
 };
+const PROFILE_COLORS = [
+  { id: 'gold',    bg: 'linear-gradient(135deg, #B8973A, #D4AF5A)' },
+  { id: 'ember',   bg: 'linear-gradient(135deg, #C0392B, #E74C3C)' },
+  { id: 'ocean',   bg: 'linear-gradient(135deg, #1a6b9a, #5B9BD5)' },
+  { id: 'forest',  bg: 'linear-gradient(135deg, #27774A, #7EB88A)' },
+  { id: 'violet',  bg: 'linear-gradient(135deg, #6C3483, #A569BD)' },
+  { id: 'rose',    bg: 'linear-gradient(135deg, #9B2335, #E8748A)' },
+  { id: 'slate',   bg: 'linear-gradient(135deg, #2C3E50, #596980)' },
+  { id: 'copper',  bg: 'linear-gradient(135deg, #7D4F30, #C07840)' },
+  { id: 'ice',     bg: 'linear-gradient(135deg, #2980B9, #AED6F1)' },
+  { id: 'onyx',    bg: 'linear-gradient(135deg, #1a1a1f, #3a3a44)' },
+];
+const getBannerBg = (id) => (PROFILE_COLORS.find(c => c.id === id) || PROFILE_COLORS[0]).bg;
 function resolveCardBg(id)       { return CARD_BG_MAP[id]     || '#FFFFFF'; }
 function resolveChallBtn(id)     { return CHALLENGE_BTN_MAP[id] || CHALLENGE_BTN_MAP.green; }
 function resolveFriendBtn(id)    { return FRIEND_BTN_MAP[id]   || FRIEND_BTN_MAP.default; }
@@ -110,6 +123,7 @@ export default function UserProfileModal({ profile: initialProfile, onClose, cur
   const [enlargedImage, setEnlargedImage] = useState(null);
   const [clan, setClan] = useState(null);
   const [rankExpanded, setRankExpanded] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const navigate = useNavigate();
   const godly = isGodly(profile);
   const level = getLevelFromXP(profile?.xp || 0);
@@ -128,9 +142,11 @@ export default function UserProfileModal({ profile: initialProfile, onClose, cur
   useEffect(() => {
     // Always re-fetch fresh profile so customizations are up to date
     if (initialProfile?.created_by) {
+      setFetching(true);
       profilesApi.getByUserId(initialProfile.created_by)
-        .then(fresh => { if (fresh) setProfile(fresh); })
-        .catch(() => {});
+        .then(fresh => { if (fresh) setProfile({ ...initialProfile, ...fresh }); })
+        .catch(() => {})
+        .finally(() => setFetching(false));
     }
     if (currentUserId && initialProfile?.created_by) {
       friendsApi.getRelationship(currentUserId, initialProfile.created_by).then(setRelationship);
@@ -139,7 +155,7 @@ export default function UserProfileModal({ profile: initialProfile, onClose, cur
       supabase.from('clan_members').select('*, clan:clans(*)').eq('user_id', profile.created_by).maybeSingle()
         .then(({ data }) => { if (data?.clan) setClan(data.clan); });
     }
-  }, [currentUserId, profile?.created_by]);
+  }, [currentUserId, initialProfile?.created_by]);
 
   const isFriend  = relationship?.status === 'accepted';
   const isPending = relationship?.status === 'pending';
@@ -174,7 +190,12 @@ export default function UserProfileModal({ profile: initialProfile, onClose, cur
   return (
     <>
       <Dialog open onOpenChange={onClose}>
-        <DialogContent className="max-w-sm p-0 overflow-hidden" style={{ background: '#0C0C0E', border: '1px solid rgba(184,151,58,0.25)', borderRadius: 20 }}>
+        <DialogContent className="max-w-sm p-0 overflow-hidden" style={{ background: cardBg, border: '1px solid rgba(184,151,58,0.25)', borderRadius: 20 }}>
+          {fetching && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: 'rgba(12,12,14,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 20 }}>
+              <div style={{ width: 28, height: 28, border: '3px solid rgba(184,151,58,0.2)', borderTop: '3px solid #B8973A', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+            </div>
+          )}
 
           {godly ? (
             <div className="relative overflow-hidden flex items-center justify-center" style={{ height: 56, background: 'linear-gradient(135deg, #3a2000, #B8973A, #FFD700, #B8973A, #3a2000)', backgroundSize: '300% 300%' }}>
@@ -182,7 +203,7 @@ export default function UserProfileModal({ profile: initialProfile, onClose, cur
               <p style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.35em', color: '#7A4900', textTransform: 'uppercase', zIndex: 10, position: 'relative' }}>KING</p>
             </div>
           ) : (
-            <div style={{ height: 3, background: 'linear-gradient(90deg, transparent, rgba(184,151,58,0.6), transparent)' }} />
+            <div style={{ height: 48, background: getBannerBg(profile?.banner_color) }} />
           )}
 
           <div className="px-5 pt-4 pb-5">
@@ -219,12 +240,12 @@ export default function UserProfileModal({ profile: initialProfile, onClose, cur
                   />
                   {godly && <GodlyBadgePill />}
                 </div>
-                <p className="text-sm" style={{ color: 'rgba(240,237,230,0.5)' }}>@{profile?.username}</p>
+                <p className="text-sm" style={{ color: cardSub || 'rgba(100,100,110,0.65)' }}>@{profile?.username}</p>
               </div>
             </div>
 
             {profile?.bio && (
-              <p className="text-sm italic mb-4" style={{ color: 'rgba(240,237,230,0.45)' }}>"{profile.bio}"</p>
+              <p className="text-sm italic mb-4" style={{ color: cardSub || 'rgba(100,100,110,0.7)' }}>"{profile.bio}"</p>
             )}
 
             {/* Rank progression panel (expandable) */}
@@ -239,7 +260,7 @@ export default function UserProfileModal({ profile: initialProfile, onClose, cur
                   fontFamily: 'inherit',
                 }}
               >
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(240,237,230,0.6)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: cardSub || 'rgba(100,100,110,0.65)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                   Rank Progression
                 </span>
                 <ChevronDown style={{
@@ -298,7 +319,7 @@ export default function UserProfileModal({ profile: initialProfile, onClose, cur
             {/* Badges — image grid */}
             {profile?.badges?.length > 0 && (
               <div className="mb-4">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Badges</p>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: cardSub || 'rgba(100,100,110,0.7)' }}>Badges</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {profile.badges.map(b => {
                     const badge = BADGE_LABELS[b];

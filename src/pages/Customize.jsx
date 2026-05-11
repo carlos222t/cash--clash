@@ -375,6 +375,9 @@ export default function Customize() {
       });
       setProfile(prev => ({ ...prev, display_name: displayName, bio, avatar_id: avatarEmoji, custom_avatar_url: avatarUrl, banner_color: colorId, card_bg_color: cardBgColor, challenge_btn_color: challengeBtnColor, friend_btn_color: friendBtnColor }));
       queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.refetchQueries({ queryKey: ['leaderboard'] });
+      queryClient.invalidateQueries({ queryKey: ['friend-profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-profiles'] });
       toast.success('Profile saved!');
     } catch(e) {
       toast.error('Failed to save — try again');
@@ -550,7 +553,7 @@ export default function Customize() {
                       </button>
                     )}
                   </div>
-                  <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+                  <input ref={fileRef} type="file" accept="image/*,image/heic,image/heif,image/webp,image/avif" capture="environment" style={{ display: 'none' }}
                     onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0])} />
                 </div>
               </div>
