@@ -1885,6 +1885,7 @@ export default function Challenges() {
   const [hasSavings,    setHasSavings]    = useState(null);
   const [onboardDone,   setOnboardDone]   = useState(true);
   const [gameMode, setGameMode] = useState('savings');
+  const [deadlineDays, setDeadlineDays] = useState(7);
   const [form, setForm] = useState({ title: '', opponent_username: '', savings_goal: '' });
   const [searching, setSearching] = useState(false);
   const [showFriendPicker, setShowFriendPicker] = useState(false);
@@ -1970,7 +1971,7 @@ export default function Challenges() {
 
       const weekStart = new Date();
       const weekEnd   = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 7);
+      weekEnd.setDate(weekEnd.getDate() + deadlineDays);
 
       const rushTasks = gameMode === 'rush' ? generateRushTasks(hasBank !== false, hasSavings !== false) : null;
 
@@ -2759,6 +2760,26 @@ export default function Challenges() {
                         style={{ background: T.surface, border: `1px solid ${T.border}`, color: T.text, borderRadius: 8 }}
                       />
                       <p style={{ fontSize: 10, color: T.textMuted, marginTop: 5 }}>How much do you each aim to save this week?</p>
+                    </div>
+                  )}
+
+                  {gameMode === 'savings' && (
+                    <div>
+                      <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.textMuted, display: 'block', marginBottom: 6 }}>
+                        Deadline — {deadlineDays} day{deadlineDays !== 1 ? 's' : ''}
+                      </label>
+                      <input
+                        type="range"
+                        min={4}
+                        max={31}
+                        value={deadlineDays}
+                        onChange={e => setDeadlineDays(Number(e.target.value))}
+                        style={{ width: '100%', accentColor: T.gold, cursor: 'pointer' }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                        <span style={{ fontSize: 10, color: T.textMuted }}>4 days</span>
+                        <span style={{ fontSize: 10, color: T.textMuted }}>31 days</span>
+                      </div>
                     </div>
                   )}
 

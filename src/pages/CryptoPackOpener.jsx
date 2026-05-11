@@ -12,11 +12,11 @@ import { useQueryClient } from '@tanstack/react-query';
 const RARITY_ORDER = ["common", "rare", "epic", "legendary", "mythic"];
 
 const RARITY_META = {
-  common:    { label: "Common",    color: "#9BA8C0", glow: "rgba(155,168,192,0.35)", chance: 0.50 },
-  rare:      { label: "Rare",      color: "#4A9EE8", glow: "rgba(74,158,232,0.60)",  chance: 0.35 },
-  epic:      { label: "Epic",      color: "#C77DFF", glow: "rgba(199,125,255,0.75)", chance: 0.10 },
-  legendary: { label: "Legendary", color: "#FFD96B", glow: "rgba(255,217,107,0.85)", chance: 0.04 },
-  mythic:    { label: "Mythic",    color: "#FF6A2C", glow: "rgba(255,106,44,0.90)",  chance: 0.01 },
+  common:    { label: "Common",    color: "#9BA8C0", glow: "rgba(155,168,192,0.35)", chance: 0.535 },
+  rare:      { label: "Rare",      color: "#4A9EE8", glow: "rgba(74,158,232,0.60)",  chance: 0.374 },
+  epic:      { label: "Epic",      color: "#C77DFF", glow: "rgba(199,125,255,0.75)", chance: 0.07 },
+  legendary: { label: "Legendary", color: "#FFD96B", glow: "rgba(255,217,107,0.85)", chance: 0.02 },
+  mythic:    { label: "Mythic",    color: "#FF6A2C", glow: "rgba(255,106,44,0.90)",  chance: 0.001, displayChance: 1.5 },
 };
 
 const CRYPTOS = [
@@ -60,10 +60,10 @@ const CRYPTOS = [
 function rollCard() {
   const r = Math.random();
   let rarity;
-  if (r < 0.50)      rarity = "common";
-  else if (r < 0.85) rarity = "rare";
-  else if (r < 0.95) rarity = "epic";
-  else if (r < 0.99) rarity = "legendary";
+  if (r < 0.535)      rarity = "common";
+  else if (r < 0.909) rarity = "rare";
+  else if (r < 0.979) rarity = "epic";
+  else if (r < 0.999) rarity = "legendary";
   else               rarity = "mythic";
   const pool = CRYPTOS.filter(c => c.rarity === rarity);
   return pool[Math.floor(Math.random() * pool.length)];
@@ -2173,7 +2173,7 @@ export default function CryptoPackOpener() {
                             <div style={{ height: 3, borderRadius: 99, width: Math.max(meta.chance * 120, 4),
                               background: meta.color, opacity: 0.5 }} />
                             <span style={{ fontSize: 12, color: "#888", fontWeight: 700, minWidth: 36, textAlign: "right" }}>
-                              {(meta.chance * 100).toFixed(0)}%
+                              {meta.displayChance !== undefined ? meta.displayChance : (meta.chance * 100).toFixed(0)}%
                             </span>
                           </div>
                         </div>

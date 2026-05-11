@@ -4,8 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
-import { Mail, Loader2, AtSign, Globe, Lock } from 'lucide-react';
+import { Mail, Loader2, AtSign, Globe, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -32,6 +31,8 @@ export default function Login() {
   const [region, setRegion] = useState('us');
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
@@ -39,10 +40,15 @@ export default function Login() {
 
   const validateUsername = (u) => /^[a-zA-Z0-9_]{3,20}$/.test(u);
 
+  const showError = (msg) => { setErrorMsg(msg); setSuccessMsg(''); };
+  const showSuccess = (msg) => { setSuccessMsg(msg); setErrorMsg(''); };
+
   const handleSubmit = async () => {
-    if (!email || !password) { toast.error('Please enter both email and password'); return; }
+    setErrorMsg('');
+    setSuccessMsg('');
+    if (!email || !password) { showError('Please enter both email and password.'); return; }
     if (isSignUp && !validateUsername(username)) {
-      toast.error('Username must be 3–20 characters: letters, numbers, underscores only');
+      showError('Username must be 3–20 characters: letters, numbers, underscores only.');
       return;
     }
     setLoading(true);
@@ -50,7 +56,7 @@ export default function Login() {
       if (isSignUp) {
         const { data: existing } = await supabase
           .from('user_profiles').select('id').eq('username', username.toLowerCase()).maybeSingle();
-        if (existing) { toast.error('Username already taken. Choose another.'); setLoading(false); return; }
+        if (existing) { showError('Username already taken. Choose another.'); setLoading(false); return; }
 
         const { data: authData, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
@@ -69,26 +75,24 @@ export default function Login() {
             battles_won: 0, tournament_wins: 0,
           }]);
         }
-        toast.success('Account created! You can now sign in.');
+        showSuccess('Account created! You can now sign in.');
         setIsSignUp(false);
       } else {
-        // Check if this email was banned before even trying
         const { data: preBan } = await supabase.from('banned_users').select('reason').eq('email', email.toLowerCase()).maybeSingle();
         if (preBan) {
-          toast.error(`This account was removed. Reason: ${preBan.reason}. Please create a new account.`);
+          showError(`This account was removed. Reason: ${preBan.reason}.`);
           setLoading(false);
           setIsSignUp(true);
           return;
         }
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        // Double-check by user_id after login (catches edge cases)
         const { data: { user: me } } = await supabase.auth.getUser();
         if (me) {
           const { data: ban } = await supabase.from('banned_users').select('reason').eq('user_id', me.id).maybeSingle();
           if (ban) {
             await supabase.auth.signOut();
-            toast.error(`This account was removed. Reason: ${ban.reason}. Please create a new account.`);
+            showError(`This account was removed. Reason: ${ban.reason}.`);
             setIsSignUp(true);
             return;
           }
@@ -96,7 +100,16 @@ export default function Login() {
         navigate('/Dashboard');
       }
     } catch (err) {
-      toast.error(err.message || 'Authentication failed');
+      const msg = err.message || '';
+      if (msg.toLowerCase().includes('invalid login') || msg.toLowerCase().includes('invalid credentials')) {
+        showError('Incorrect email or password. Please try again.');
+      } else if (msg.toLowerCase().includes('email not confirmed')) {
+        showError('Please confirm your email before signing in.');
+      } else if (msg.toLowerCase().includes('too many requests')) {
+        showError('Too many attempts. Please wait a moment and try again.');
+      } else {
+        showError(msg || 'Something went wrong. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -115,10 +128,10 @@ export default function Login() {
         <div className="text-center space-y-4">
           <div className="relative inline-block group">
             <div className="absolute inset-0 bg-[#D4A017] blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
-            <img 
-              src="/logocash.png" 
-              alt="Cash Clash Logo" 
-              className="w-20 h-20 relative z-10 drop-shadow-[0_0_15px_rgba(212,160,23,0.5)]" 
+            <img
+              src="/logocash.png"
+              alt="Cash Clash Logo"
+              className="w-20 h-20 relative z-10 drop-shadow-[0_0_15px_rgba(212,160,23,0.5)]"
             />
           </div>
           <div>
@@ -138,8 +151,33 @@ export default function Login() {
               {isSignUp ? 'Establish your credentials, recruit.' : 'Welcome back, commander.'}
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent className="space-y-4">
+
+            {/* Error banner */}
+            {errorMsg && (
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: 10,
+                background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.4)',
+                borderRadius: 8, padding: '10px 14px',
+              }}>
+                <AlertCircle style={{ width: 16, height: 16, color: '#f87171', flexShrink: 0, marginTop: 1 }} />
+                <p style={{ fontSize: 13, color: '#f87171', margin: 0, lineHeight: 1.4 }}>{errorMsg}</p>
+              </div>
+            )}
+
+            {/* Success banner */}
+            {successMsg && (
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: 10,
+                background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.4)',
+                borderRadius: 8, padding: '10px 14px',
+              }}>
+                <CheckCircle style={{ width: 16, height: 16, color: '#4ade80', flexShrink: 0, marginTop: 1 }} />
+                <p style={{ fontSize: 13, color: '#4ade80', margin: 0, lineHeight: 1.4 }}>{successMsg}</p>
+              </div>
+            )}
+
             {isSignUp && (
               <div className="space-y-2">
                 <Label htmlFor="username" className="text-[#E8E0D0]/80 text-xs uppercase tracking-widest">Username</Label>
@@ -154,8 +192,8 @@ export default function Login() {
                     maxLength={20}
                   />
                 </div>
-                <p style={{ fontSize: 11, color: 'rgba(212,160,23,0.6)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  ⚠️ Usernames must be appropriate. Offensive or inappropriate usernames may result in account removal.
+                <p style={{ fontSize: 11, color: 'rgba(212,160,23,0.6)', marginTop: 4 }}>
+                  Usernames must be appropriate. Offensive usernames may result in account removal.
                 </p>
               </div>
             )}
@@ -180,12 +218,12 @@ export default function Login() {
               <Label htmlFor="email" className="text-[#E8E0D0]/80 text-xs uppercase tracking-widest">Email Address</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#D4A017]/60" />
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="you@domain.com" 
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@domain.com"
                   value={email}
-                  onChange={e => setEmail(e.target.value)} 
+                  onChange={e => { setEmail(e.target.value); setErrorMsg(''); }}
                   onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                   className="pl-9 bg-[#1A1A1A] border-[#D4A017]/10 text-[#E8E0D0] focus-visible:ring-[#D4A017]/30 placeholder:text-[#8A7D6A]/40"
                 />
@@ -196,20 +234,20 @@ export default function Login() {
               <Label htmlFor="password" className="text-[#E8E0D0]/80 text-xs uppercase tracking-widest">Passkey</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#D4A017]/60" />
-                <Input 
-                  id="password" 
-                  type="password" 
-                  placeholder="••••••••" 
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
                   value={password}
-                  onChange={e => setPassword(e.target.value)} 
+                  onChange={e => { setPassword(e.target.value); setErrorMsg(''); }}
                   onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                   className="pl-9 bg-[#1A1A1A] border-[#D4A017]/10 text-[#E8E0D0] focus-visible:ring-[#D4A017]/30 placeholder:text-[#8A7D6A]/40"
                 />
               </div>
             </div>
 
-            <Button 
-              onClick={handleSubmit} 
+            <Button
+              onClick={handleSubmit}
               className="w-full h-11 bg-gradient-to-r from-[#C17F24] via-[#D4A017] to-[#C17F24] hover:scale-[1.02] transition-transform text-[#0A0A0A] font-bold tracking-[0.15em] font-['Cinzel_Decorative'] shadow-[0_0_20px_rgba(212,160,23,0.3)] border-none"
               disabled={loading}
             >
@@ -225,8 +263,8 @@ export default function Login() {
 
             <p className="text-center text-sm text-[#8A7D6A]">
               {isSignUp ? 'Already a veteran?' : "New to the battle?"}{' '}
-              <button 
-                onClick={() => setIsSignUp(!isSignUp)} 
+              <button
+                onClick={() => { setIsSignUp(!isSignUp); setErrorMsg(''); setSuccessMsg(''); }}
                 className="text-[#D4A017] hover:text-[#F2C94C] transition-colors font-semibold underline underline-offset-4 decoration-[#D4A017]/30"
               >
                 {isSignUp ? 'Sign in' : 'Create Account'}

@@ -21,7 +21,6 @@ const COMMUNITY_NAV = [
 
 const EXPLORE_NAV = [
   { path: '/GoalGuide', icon: Target, label: 'Goal Guide', tutorialId: null },
-  { path: '/StockMarket', icon: BarChart2, label: 'Stock Market', tutorialId: null },
   { path: '/Packs', icon: CreditCard, label: 'Store', tutorialId: null },
   { path: '/Customize', icon: Paintbrush, label: 'Customize', tutorialId: null },
   { path: '/Diary', icon: NotebookPen, label: 'Diary', tutorialId: null },

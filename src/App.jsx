@@ -33,11 +33,69 @@ const AuthenticatedApp = () => {
 
   if (isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto"></div>
-          <p className="text-sm text-muted-foreground font-heading">Loading Cash Clash...</p>
+      <div style={{
+        position: 'fixed', inset: 0, background: '#0A0A0A',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+      }}>
+        {/* Ambient glow */}
+        <div style={{
+          position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%, -50%)',
+          width: 400, height: 400, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(212,160,23,0.12) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+
+        {/* Logo */}
+        <div style={{ position: 'relative', marginBottom: 32 }}>
+          <div style={{
+            position: 'absolute', inset: -16, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(212,160,23,0.25) 0%, transparent 70%)',
+            animation: 'cc-pulse 2s ease-in-out infinite',
+          }} />
+          <img
+            src="/logocash.png"
+            alt="Cash Clash"
+            style={{ width: 80, height: 80, position: 'relative', zIndex: 1,
+              filter: 'drop-shadow(0 0 20px rgba(212,160,23,0.5))' }}
+          />
         </div>
+
+        {/* Title */}
+        <h1 style={{
+          fontSize: 28, fontWeight: 800, letterSpacing: '0.15em',
+          textTransform: 'uppercase', color: '#E8E0D0', margin: '0 0 4px 0',
+        }}>
+          Cash <span style={{ color: '#D4A017' }}>Clash</span>
+        </h1>
+        <p style={{ fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase',
+          color: 'rgba(138,125,106,0.7)', margin: '0 0 40px 0' }}>
+          Compete • Save • Win
+        </p>
+
+        {/* Loading bar */}
+        <div style={{
+          width: 180, height: 2, background: 'rgba(212,160,23,0.15)',
+          borderRadius: 99, overflow: 'hidden',
+        }}>
+          <div style={{
+            height: '100%', width: '40%', borderRadius: 99,
+            background: 'linear-gradient(90deg, #7a5e18, #D4A017, #7a5e18)',
+            backgroundSize: '200% 100%',
+            animation: 'cc-shimmer 1.4s ease-in-out infinite',
+          }} />
+        </div>
+
+        <style>{`
+          @keyframes cc-pulse {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.08); }
+          }
+          @keyframes cc-shimmer {
+            0% { background-position: 200% 0; transform: translateX(-100%); }
+            100% { background-position: -200% 0; transform: translateX(350%); }
+          }
+        `}</style>
       </div>
     );
   }
