@@ -629,7 +629,7 @@ export default function Dashboard() {
                   transition={{ delay: 0.3 + i * 0.05 }}
                   className="cc-badge-tile"
                 >
-                  <span style={{ fontSize: 26, display: 'block' }}>{badge.icon}</span>
+                  <img src={"/achievements/" + badge.name.toLowerCase().replace(/\s+/g, '.') + ".png"} alt={badge.name} style={{ width: 40, height: 40, objectFit: 'contain', display: 'block', margin: '0 auto' }} onError={(e) => { e.target.style.display = 'none'; }} />
                   <p style={{ fontSize: 10, fontWeight: 600, marginTop: 6, color: tokens.textPrimary, lineHeight: 1.3 }}>
                     {badge.name}
                   </p>

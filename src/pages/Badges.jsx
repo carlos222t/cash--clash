@@ -93,11 +93,7 @@ export default function Badges() {
 
   const RANKS = [
     { name: 'Rookie Saver',  minLevel: 1,  img: '/badges/rookie_saver.png',  desc: 'Every legend starts somewhere. Reach Level 1 to earn this rank.' },
-    { name: 'Penny Pincher', minLevel: 5,  img: '/badges/pennypincher.png',  desc: 'You are getting serious about your finances. Reach Level 5 to unlock.' },
-    { name: 'Smart Spender', minLevel: 10, img: '/badges/smartspender.png',  desc: 'Your money habits are sharpening. Reach Level 10 to unlock.' },
-    { name: 'Savings Pro',   minLevel: 15, img: '/badges/savingspro.png',    desc: 'A true savings professional. Reach Level 15 to unlock.' },
-    { name: 'Budget Boss',   minLevel: 20, img: '/badges/budgetboss.png',    desc: 'You run your budget like a boss. Reach Level 20 to unlock.' },
-    { name: 'Money Master',  minLevel: 30, img: '/badges/moneymaster.png',   desc: 'Complete mastery of personal finance. Reach Level 30 to unlock.' },
+    { name: 'Penny Pincher', minLevel: 5,  img: '/badges/pennypincher.png',  desc: 'You are getting serious about your finances. Reach Level 5 to unlock.' },    { name: 'Savings Pro',   minLevel: 15, img: '/badges/savingspro.png',    desc: 'A true savings professional. Reach Level 15 to unlock.' },    { name: 'Money Master',  minLevel: 30, img: '/badges/moneymaster.png',   desc: 'Complete mastery of personal finance. Reach Level 30 to unlock.' },
     { name: 'Cash Legend',   minLevel: 40, img: '/badges/cashlegend.png',    desc: 'The pinnacle of Cash Clash greatness. Reach Level 40 to become a legend.' },
   ];
 

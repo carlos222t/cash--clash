@@ -59,11 +59,7 @@ export function getXPProgress(xp) {
 
 export function getRankTitle(level) {
   if (level >= 40) return 'Cash Legend';
-  if (level >= 30) return 'Money Master';
-  if (level >= 20) return 'Budget Boss';
-  if (level >= 15) return 'Savings Pro';
-  if (level >= 10) return 'Smart Spender';
-  if (level >= 5)  return 'Penny Pincher';
+  if (level >= 30) return 'Money Master';  if (level >= 15) return 'Savings Pro';  if (level >= 5)  return 'Penny Pincher';
   return 'Rookie Saver';
 }
 
@@ -126,31 +122,19 @@ export const ALL_BADGES = [
   { id: 'streak_30',      name: 'Monthly Master',    description: '30-day tracking streak',              icon: '🌟',  xpReward: 200, condition: (s) => s.streakDays >= 30 },
   { id: 'clash_winner',   name: 'Clash Victor',      description: 'Win your first 1v1 challenge',        icon: '⚔️', xpReward: 100, condition: (s) => s.challengesWon >= 1 },
   { id: 'clash_champ',    name: 'Clash Champion',    description: 'Win 5 challenges',                    icon: '🏅',  xpReward: 250, condition: (s) => s.challengesWon >= 5 },
-  { id: 'level_5',        name: 'Rising Star',       description: 'Reach level 5',                       icon: '⭐',  xpReward: 0,   condition: (s) => s.level >= 5 },
-  { id: 'level_10',       name: 'Smart Spender',     description: 'Reach level 10',                      icon: '💎',  xpReward: 0,   condition: (s) => s.level >= 10 },
-  { id: 'level_20',       name: 'Budget Boss',       description: 'Reach level 20',                      icon: '🎖️', xpReward: 0,   condition: (s) => s.level >= 20 },
   { id: 'diversified',    name: 'Diversified',       description: 'Track 5+ categories',                 icon: '🎨',  xpReward: 40,  condition: (s) => s.categoriesUsed >= 5 },
   { id: 'big_saver',      name: 'Big Saver',         description: 'Save 20% of income in a month',       icon: '🚀',  xpReward: 100, condition: (s) => s.savingsRate >= 20 },
-  // Legacy badge — No longer obtainable by new players
-  {
-    id: 'RUSHorDRAG',
-    name: 'RUSHER',
-    description: 'Win a Challenge Rush (Legacy)',
-      xpReward: 0,
-    godly: true,
-    condition: () => false, // Condition set to false so it cannot be earned anymore
-  },
 ];
 
-export function getUnlockedBadges(earnedBadgeIds) {
-  return ALL_BADGES.filter(b => (earnedBadgeIds || []).includes(b.id));
+export function getUnlockedBadges(earnedBadgeIds = []) {
+  return ALL_BADGES.filter(b => earnedBadgeIds.includes(b.id));
 }
 
-export function getLockedBadges(earnedBadgeIds) {
-  return ALL_BADGES.filter(b => !(earnedBadgeIds || []).includes(b.id));
+export function getLockedBadges(earnedBadgeIds = []) {
+  return ALL_BADGES.filter(b => !earnedBadgeIds.includes(b.id));
 }
 
-// Returns true only for @carlos
-export function isGodly(profile) {
-  return profile?.username === 'carlos';
+export function isGodly(badgeId) {
+  const badge = ALL_BADGES.find(b => b.id === badgeId);
+  return badge?.godly === true;
 }

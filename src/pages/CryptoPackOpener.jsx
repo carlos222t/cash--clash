@@ -21,40 +21,40 @@ const RARITY_META = {
 
 const CRYPTOS = [
   // Commons — Gothic Series
-  { id: "BrokenPhone",   name: "Broken Phone",   image: "/cards/BrokenPhone.png",   rarity: "common",    ovr: 57, series: "Gothic Series" },
+  { id: "BrokenPhone",   name: "Broken Phone",   image: "/cards/brokenphone.png",   rarity: "common",    ovr: 57, series: "Gothic Series" },
   { id: "9to5",          name: "9 to 5",          image: "/cards/9to5.png",          rarity: "common",    ovr: 54, series: "Gothic Series" },
-  { id: "JunkYardKing",  name: "Junk Yard King",  image: "/cards/JunkYardKing.png",  rarity: "common",    ovr: 49, series: "Gothic Series" },
-  { id: "PennyStock",    name: "Penny Stock",     image: "/cards/PennyStock.png",    rarity: "common",    ovr: 62, series: "Gothic Series" },
-  { id: "FirstCar",      name: "First Car",       image: "/cards/FirstCar.png",      rarity: "common",    ovr: 59, series: "Gothic Series" },
-  { id: "FastFood",      name: "Fast Food",       image: "/cards/FastFood.png",      rarity: "common",    ovr: 53, series: "Gothic Series" },
-  { id: "BrokenHouse",   name: "Broken House",    image: "/cards/BrokenHouse.png",   rarity: "common",    ovr: 55, series: "Gothic Series" },
-  { id: "BusyBus",       name: "Busy Bus",        image: "/cards/BusyBus.png",       rarity: "common",    ovr: 54, series: "Gothic Series" },
-  { id: "StinkyShoes",   name: "Stinky Shoes",    image: "/cards/StinkyShoes.png",   rarity: "common",    ovr: 54, series: "Gothic Series" },
-  { id: "HomelessMan",   name: "Homeless Man",    image: "/cards/HomelessMan.png",   rarity: "common",    ovr: 51, series: "Gothic Series" },
-  { id: "Unemployed",    name: "Unemployed",      image: "/cards/Unemployed.png",    rarity: "common",    ovr: 67, series: "Gothic Series" },
-  { id: "DoomScroller",  name: "Doom Scroller",   image: "/cards/DoomScroller.png",  rarity: "common",    ovr: 59, series: "Gothic Series" },
+  { id: "JunkYardKing",  name: "Junk Yard King",  image: "/cards/junkyardking.png",  rarity: "common",    ovr: 49, series: "Gothic Series" },
+  { id: "PennyStock",    name: "Penny Stock",     image: "/cards/pennystock.png",    rarity: "common",    ovr: 62, series: "Gothic Series" },
+  { id: "FirstCar",      name: "First Car",       image: "/cards/firstcar.png",      rarity: "common",    ovr: 59, series: "Gothic Series" },
+  { id: "FastFood",      name: "Fast Food",       image: "/cards/fastfood.png",      rarity: "common",    ovr: 53, series: "Gothic Series" },
+  { id: "BrokenHouse",   name: "Broken House",    image: "/cards/brokenhouse.png",   rarity: "common",    ovr: 55, series: "Gothic Series" },
+  { id: "BusyBus",       name: "Busy Bus",        image: "/cards/busybus.png",       rarity: "common",    ovr: 54, series: "Gothic Series" },
+  { id: "StinkyShoes",   name: "Stinky Shoes",    image: "/cards/stinkyshoes.png",   rarity: "common",    ovr: 54, series: "Gothic Series" },
+  { id: "HomelessMan",   name: "Homeless Man",    image: "/cards/homelessman.png",   rarity: "common",    ovr: 51, series: "Gothic Series" },
+  { id: "Unemployed",    name: "Unemployed",      image: "/cards/unemployed.png",    rarity: "common",    ovr: 67, series: "Gothic Series" },
+  { id: "DoomScroller",  name: "Doom Scroller",   image: "/cards/doomscroller.png",  rarity: "common",    ovr: 59, series: "Gothic Series" },
   // Rares — Techno Series
-  { id: "Bitcoin",       name: "Bitcoin",         image: "/cards/Bitcoin.png",       rarity: "rare",      ovr: 75, series: "Techno Series" },
-  { id: "Ethereum",      name: "Ethereum",        image: "/cards/Ethereum.png",      rarity: "rare",      ovr: 74, series: "Techno Series" },
-  { id: "DodgeCoin",     name: "Dodge Coin",      image: "/cards/DodgeCoin.png",     rarity: "rare",      ovr: 69, series: "Techno Series" },
-  { id: "Nike",          name: "Nike",            image: "/cards/Nike.png",          rarity: "rare",      ovr: 72, series: "Techno Series" },
-  { id: "Iphone",        name: "iPhone",          image: "/cards/Iphone.png",        rarity: "rare",      ovr: 80, series: "Techno Series" },
-  { id: "RealState",     name: "Real Estate",     image: "/cards/RealState.png",     rarity: "rare",      ovr: 72, series: "Techno Series" },
-  { id: "NewSuit",       name: "New Suit",        image: "/cards/NewSuit.png",       rarity: "rare",      ovr: 71, series: "Techno Series" },
-  { id: "Vacation",      name: "Vacation",        image: "/cards/Vacation.png",      rarity: "rare",      ovr: 78, series: "Techno Series" },
+  { id: "Bitcoin",       name: "Bitcoin",         image: "/cards/bitcoin.png",       rarity: "rare",      ovr: 75, series: "Techno Series" },
+  { id: "Ethereum",      name: "Ethereum",        image: "/cards/ethereum.png",      rarity: "rare",      ovr: 74, series: "Techno Series" },
+  { id: "DodgeCoin",     name: "Dodge Coin",      image: "/cards/dodgecoin.png",     rarity: "rare",      ovr: 69, series: "Techno Series" },
+  { id: "Nike",          name: "Nike",            image: "/cards/nike.png",          rarity: "rare",      ovr: 72, series: "Techno Series" },
+  { id: "Iphone",        name: "iPhone",          image: "/cards/iphone.png",        rarity: "rare",      ovr: 80, series: "Techno Series" },
+  { id: "RealState",     name: "Real Estate",     image: "/cards/realstate.png",     rarity: "rare",      ovr: 72, series: "Techno Series" },
+  { id: "NewSuit",       name: "New Suit",        image: "/cards/newsuit.png",       rarity: "rare",      ovr: 71, series: "Techno Series" },
+  { id: "Vacation",      name: "Vacation",        image: "/cards/vacation.png",      rarity: "rare",      ovr: 78, series: "Techno Series" },
   // Epics — Neon Night Series
-  { id: "RecessionBear", name: "Recession Bear",  image: "/cards/RecessionBear.png", rarity: "epic",      ovr: 87, series: "Neon Night Series" },
-  { id: "YachtOwner",    name: "Yacht Owner",     image: "/cards/YachtOwner.png",    rarity: "epic",      ovr: 87, series: "Neon Night Series" },
-  { id: "1MDeal",        name: "1M Deal",         image: "/cards/1MDeal.png",        rarity: "epic",      ovr: 84, series: "Neon Night Series" },
-  { id: "Ferrari",       name: "Ferrari",         image: "/cards/Ferrari.png",       rarity: "epic",      ovr: 91, series: "Neon Night Series" },
-  { id: "Lamborghini",   name: "Lamborghini",     image: "/cards/Lamborghini.png",   rarity: "epic",      ovr: 90, series: "Neon Night Series" },
-  { id: "Rolex",         name: "Rolex",           image: "/cards/Rolex.png",         rarity: "epic",      ovr: 91, series: "Neon Night Series" },
+  { id: "RecessionBear", name: "Recession Bear",  image: "/cards/recessionbear.png", rarity: "epic",      ovr: 87, series: "Neon Night Series" },
+  { id: "YachtOwner",    name: "Yacht Owner",     image: "/cards/yachtowner.png",    rarity: "epic",      ovr: 87, series: "Neon Night Series" },
+  { id: "1MDeal",        name: "1M Deal",         image: "/cards/1mdeal.png",        rarity: "epic",      ovr: 84, series: "Neon Night Series" },
+  { id: "Ferrari",       name: "Ferrari",         image: "/cards/ferrari.png",       rarity: "epic",      ovr: 91, series: "Neon Night Series" },
+  { id: "Lamborghini",   name: "Lamborghini",     image: "/cards/lamborghini.png",   rarity: "epic",      ovr: 90, series: "Neon Night Series" },
+  { id: "Rolex",         name: "Rolex",           image: "/cards/rolex.png",         rarity: "epic",      ovr: 91, series: "Neon Night Series" },
   // Legendaries
-  { id: "Goat",              name: "Goat",              image: "/cards/Goat.png",              rarity: "legendary", ovr: 96, series: "Graffiti Series" },
-  { id: "Metropolis",        name: "Metropolis",        image: "/cards/Metropolis.png",        rarity: "legendary", ovr: 94, series: "Graffiti Series" },
-  { id: "WolfOfWallstreet",  name: "Wolf of Wallstreet",image: "/cards/WolfOfWallstreet.png",  rarity: "legendary", ovr: 97, series: "1930s' Series" },
+  { id: "Goat",              name: "Goat",              image: "/cards/goat.png",              rarity: "legendary", ovr: 96, series: "Graffiti Series" },
+  { id: "Metropolis",        name: "Metropolis",        image: "/cards/metropolis.png",        rarity: "legendary", ovr: 94, series: "Graffiti Series" },
+  { id: "WolfOfWallstreet",  name: "Wolf of Wallstreet",image: "/cards/wolfofwallstreet.png",  rarity: "legendary", ovr: 97, series: "1930s' Series" },
   // Mythic
-  { id: "TotalWorldControl", name: "Total World Control",image: "/cards/TotalWorldControl.png",rarity: "mythic",    ovr: 99, series: "??? Series" },
+  { id: "TotalWorldControl", name: "Total World Control",image: "/cards/totalworldcontrol.png",rarity: "mythic",    ovr: 99, series: "??? Series" },
 ];
 
 function rollCard() {
@@ -714,7 +714,7 @@ function TWCGlitchOverlay() {
       transform: "translate(-50%, -50%)",
       width: 288, height: 384,
     }}>
-      <img src="/cards/TotalWorldControl.png" alt=""
+      <img src="/cards/totalworldcontrol.png" alt=""
         style={{
           width: "100%", height: "100%", objectFit: "cover", borderRadius: 12,
           animation: "cpo-twc-glitch 0.38s steps(2) both",
@@ -872,7 +872,7 @@ function MythicRevealSequence({ card, onClose }) {
                   : `0 0 60px ${meta.glow}, inset 0 0 40px ${meta.glow}`,
                 ...(heartbeat && !flipped ? { animation: "cpo-heartbeat 0.75s ease-in-out infinite, cpo-mythic-border-pulse 0.75s ease-in-out infinite" } : {}),
               }}>
-                <img src={showTWC ? "/cards/TotalWorldControl.png" : "/mythiccard.png"} alt="Mythic" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", borderRadius: 10, transition: "opacity 0.3s" }} />
+                <img src={showTWC ? "/cards/totalworldcontrol.png" : "/mythiccard.png"} alt="Mythic" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", borderRadius: 10, transition: "opacity 0.3s" }} />
                 {glitching && (
                   <div style={{ position: "absolute", inset: 0, zIndex: 10, borderRadius: 12, overflow: "hidden", pointerEvents: "none" }}>
                     <div style={{ width: "100%", height: "100%", background: "linear-gradient(160deg, #1a1a22, #0c0c10)", animation: "cpo-card-glitch 0.62s steps(2) both" }} />
@@ -895,7 +895,7 @@ function MythicRevealSequence({ card, onClose }) {
                 overflow: "hidden",
                 boxShadow: `0 0 60px ${meta.glow}, inset 0 0 40px ${meta.glow}`,
               }}>
-                <img src="/cards/TotalWorldControl.png" alt="Total World Control"
+                <img src="/cards/totalworldcontrol.png" alt="Total World Control"
                   style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", display: "block", borderRadius: 10 }} />
               </div>
             </div>
@@ -2076,7 +2076,11 @@ export default function CryptoPackOpener() {
     setTimeout(() => setPhase("reveal"), 2200);
   };
 
-  const close = () => { setCard(null); setPhase("idle"); };
+  const close = () => {
+    setCard(null);
+    setPhase("cooldown");
+    setTimeout(() => setPhase("idle"), 600);
+  };
 
   const handleTabChange = (t) => {
     setTab(t);
@@ -2136,7 +2140,7 @@ export default function CryptoPackOpener() {
             <>
               <PackButton
                 onClick={open}
-                disabled={phase !== "idle"}
+                disabled={phase !== "idle" || phase === "cooldown"}
                 shaking={phase === "shaking"}
               />
               {phase === "idle" && (

@@ -116,7 +116,7 @@ export default function Login() {
           <div className="relative inline-block group">
             <div className="absolute inset-0 bg-[#D4A017] blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
             <img 
-              src="logocash.png" 
+              src="/logocash.png" 
               alt="Cash Clash Logo" 
               className="w-20 h-20 relative z-10 drop-shadow-[0_0_15px_rgba(212,160,23,0.5)]" 
             />
