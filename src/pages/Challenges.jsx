@@ -1890,6 +1890,7 @@ export default function Challenges() {
   const [searching, setSearching] = useState(false);
   const [showFriendPicker, setShowFriendPicker] = useState(false);
   const [activeTab, setActiveTab] = useState('clashes'); // 'clashes' | 'review' | 'tournaments'
+  const [clashFilter, setClashFilter] = useState('active'); // 'active' | 'pending' | 'completed'
   const [tournamentDialogOpen, setTournamentDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -2955,35 +2956,46 @@ export default function Challenges() {
           </div>
         )}
 
+        {/* ── CLASH FILTER TABS ── */}
+        {myChallenges.length > 0 && (
+          <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+            {[
+              { key: 'active',    label: 'Active',    Icon: Swords, count: active.length,    color: T.gold },
+              { key: 'pending',   label: 'Pending',   Icon: Clock,  count: pending.length,   color: T.textMuted },
+              { key: 'completed', label: 'Completed', Icon: Trophy, count: completed.length, color: T.success },
+            ].map(({ key, label, Icon, count, color }) => {
+              const isActive = clashFilter === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setClashFilter(key)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '8px 16px', borderRadius: 99,
+                    background: isActive ? T.goldDim : T.surfaceHigh,
+                    border: `1.5px solid ${isActive ? T.goldBorder : T.border}`,
+                    color: isActive ? T.gold : T.textMuted,
+                    fontSize: 11, fontWeight: isActive ? 700 : 500,
+                    cursor: 'pointer', transition: 'all 0.15s',
+                  }}
+                >
+                  <Icon style={{ width: 12, height: 12, color: isActive ? T.gold : color }} />
+                  {label}
+                  <span style={{
+                    minWidth: 18, height: 18, borderRadius: 99, padding: '0 5px',
+                    background: isActive ? 'rgba(184,151,58,0.25)' : 'rgba(255,255,255,0.06)',
+                    color: isActive ? T.gold : T.textMuted,
+                    fontSize: 10, fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          {pending.length > 0 && (
-            <div>
-              <SectionLabel icon={Clock} label="Pending Invites" />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 14 }}>
-                {pending.map((c, i) => <ClashCard key={c.id} challenge={c} i={i} />)}
-              </div>
-            </div>
-          )}
-
-          {active.length > 0 && (
-            <div>
-              <SectionLabel icon={Swords} label="Active Clashes" color={T.gold} />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 14 }}>
-                {active.map((c, i) => <ClashCard key={c.id} challenge={c} i={i} />)}
-              </div>
-            </div>
-          )}
-
-          {completed.length > 0 && (
-            <div>
-              <SectionLabel icon={Trophy} label="Completed" color={T.success} />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 14 }}>
-                {completed.map((c, i) => <ClashCard key={c.id} challenge={c} i={i} />)}
-              </div>
-            </div>
-          )}
-
-          {myChallenges.length === 0 && (
+          {myChallenges.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '80px 0', color: T.textMuted }}>
               <Swords style={{ width: 40, height: 40, margin: '0 auto 16px', opacity: 0.15 }} />
               <p style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 6 }}>No clashes yet</p>
@@ -3000,6 +3012,42 @@ export default function Challenges() {
                 <Info style={{ width: 12, height: 12 }} /> See how it works
               </button>
             </div>
+          ) : clashFilter === 'active' ? (
+            active.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: T.textMuted }}>
+                <Swords style={{ width: 32, height: 32, margin: '0 auto 12px', opacity: 0.15 }} />
+                <p style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 4 }}>No active clashes</p>
+                <p style={{ fontSize: 11 }}>Send a clash invite to get started.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 14 }}>
+                {active.map((c, i) => <ClashCard key={c.id} challenge={c} i={i} />)}
+              </div>
+            )
+          ) : clashFilter === 'pending' ? (
+            pending.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: T.textMuted }}>
+                <Clock style={{ width: 32, height: 32, margin: '0 auto 12px', opacity: 0.15 }} />
+                <p style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 4 }}>No pending invites</p>
+                <p style={{ fontSize: 11 }}>All invites have been responded to.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 14 }}>
+                {pending.map((c, i) => <ClashCard key={c.id} challenge={c} i={i} />)}
+              </div>
+            )
+          ) : (
+            completed.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: T.textMuted }}>
+                <Trophy style={{ width: 32, height: 32, margin: '0 auto 12px', opacity: 0.15 }} />
+                <p style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 4 }}>No completed clashes</p>
+                <p style={{ fontSize: 11 }}>Finish a clash to see it here.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 14 }}>
+                {completed.map((c, i) => <ClashCard key={c.id} challenge={c} i={i} />)}
+              </div>
+            )
           )}
         </div>
         </>)}

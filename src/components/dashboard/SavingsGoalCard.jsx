@@ -5,11 +5,11 @@ import { Target, TrendingUp, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const MILESTONES = [
-  { amount: 100, label: 'First $100', icon: '🌱' },
-  { amount: 500, label: '$500 Saver', icon: '🏆' },
-  { amount: 1000, label: 'Grand Saver', icon: '💎' },
-  { amount: 2000, label: 'Cash Legend', icon: '👑' },
-  { amount: 5000, label: 'Elite Saver', icon: '🚀' },
+  { amount: 100, label: 'First $100', icon: '' },
+  { amount: 500, label: '$500 Saver', icon: '' },
+  { amount: 1000, label: 'Grand Saver', icon: '' },
+  { amount: 2000, label: 'Cash Legend', icon: '' },
+  { amount: 5000, label: 'Elite Saver', icon: '' },
 ];
 
 export default function SavingsGoalCard({ profile, transactions }) {

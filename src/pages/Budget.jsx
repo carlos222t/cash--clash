@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, entities, supabase } from '@/api/supabaseClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, DollarSign, LayoutGrid, RefreshCw, Calculator, PiggyBank } from 'lucide-react';
+import { Plus, DollarSign, LayoutGrid, RefreshCw, Calculator, PiggyBank, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { format, addWeeks, addDays, addMonths, parseISO } from 'date-fns';
@@ -10,6 +10,8 @@ import TransactionList from '../components/budget/TransactionList';
 import BudgetCalculator from '../components/budget/BudgetCalculator';
 import AutoTransactions from '../components/budget/AutoTransactions';
 import SavingsTracker from '../components/budget/SavingsTracker';
+import PredictedIncomePanel from '../components/budget/PredictedIncomePanel';
+import BudgetOnboarding from '../components/budget/BudgetOnboarding';
 import { XP_ACTIONS } from '../components/game/GameUtils';
 
 /* ─── Design tokens (mirrored from Dashboard) ────────────────────────────── */
@@ -40,6 +42,8 @@ export default function Budget() {
   const [user, setUser]       = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState('transactions');
+  const [budgetSaved, setBudgetSaved] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const queryClient           = useQueryClient();
 
   useEffect(() => { auth.me().then(setUser).catch(() => {}); }, []);
@@ -111,6 +115,13 @@ export default function Budget() {
     })();
   }, [profile?.id, user?.id]);
 
+  useEffect(() => {
+    if (!profile) return;
+    if (!profile.has_seen_budget_onboarding) {
+      setShowOnboarding(true);
+    }
+  }, [profile?.id]);
+
   const handleAddTransaction = async (data) => {
     await entities.Transaction.create({ ...data, created_by: user?.id });
     const p = await ensureProfile();
@@ -174,10 +185,15 @@ export default function Budget() {
   };
 
   const handleSaveBudget = async (budgetData) => {
+    const incomeFromTx = (transactions || []).filter(t => t.type === "income" || t.type === "saving").reduce((s, t) => s + Number(t.amount || 0), 0);
+    const computedBudget = incomeFromTx + (budgetData.monthly_income || profile?.monthly_income || 0);
+    budgetData = { ...budgetData, monthly_budget: computedBudget };
     const p = await ensureProfile();
     await entities.UserProfile.update(p.id, budgetData);
     queryClient.invalidateQueries({ queryKey: ['profile'] });
     toast.success('Budget plan saved!');
+    setBudgetSaved(true);
+    setTimeout(() => setBudgetSaved(false), 2800);
   };
 
   const handleAddAuto = async (item) => {
@@ -196,6 +212,30 @@ export default function Budget() {
     await entities.UserProfile.update(p.id, { auto_transactions: current });
     queryClient.invalidateQueries({ queryKey: ['profile'] });
     toast.success('Auto transaction removed');
+  };
+
+  const handleOnboardingComplete = async (data) => {
+    setShowOnboarding(false);
+    const p = await ensureProfile();
+    await entities.UserProfile.update(p.id, {
+      has_seen_budget_onboarding: true,
+      ...(data?.monthly_income ? { monthly_income: data.monthly_income } : {}),
+    });
+    queryClient.invalidateQueries({ queryKey: ['profile'] });
+    if (data?.monthly_income) {
+      toast.success(`Monthly income set to $${data.monthly_income.toLocaleString()}!`);
+    }
+  };
+
+  const handleOnboardingSalary = async (data) => {
+    const p = await ensureProfile();
+    await entities.UserProfile.update(p.id, {
+      ...(data?.monthly_income ? { monthly_income: data.monthly_income } : {}),
+    });
+    queryClient.invalidateQueries({ queryKey: ['profile'] });
+    if (data?.monthly_income) {
+      toast.success(`Monthly income set to $${data.monthly_income.toLocaleString()}!`);
+    }
   };
 
   return (
@@ -435,56 +475,80 @@ export default function Budget() {
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 20px 80px' }}>
 
-        {/* ── HEADER ─────────────────────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: -14 }}
+        <div style={{ padding: '8px 0 16px' }}>
+          <motion.h1
+            initial={{ fontSize: '160px', opacity: 0.85 }}
+            animate={{ fontSize: '28px', opacity: 1 }}
+            transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
+            style={{
+              margin: 0,
+              fontFamily: "'Cormorant Garamond', serif",
+              fontWeight: 600,
+              color: tokens.textPrimary,
+              lineHeight: 1.1,
+              transformOrigin: 'left center',
+            }}
+          >
+            Budget Tracker
+          </motion.h1>
+        </div>
+
+        {/* ── ADD TRANSACTION BUTTON (full width) ───────────────────────── */}
+        <motion.button
+          initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
+          onClick={() => setShowForm(!showForm)}
           style={{
-            position: 'relative',
-            overflow: 'hidden',
-            borderRadius: 16,
-            background: tokens.surface,
-            border: `1px solid ${tokens.borderGold}`,
-            padding: '24px 28px',
-            marginBottom: 24,
+            width: '100%',
+            marginBottom: 16,
+            padding: '14px 24px',
+            borderRadius: 14,
+            border: showForm ? `1px solid ${tokens.borderGold}` : `1px dashed rgba(184,151,58,0.35)`,
+            background: showForm ? tokens.surfaceAlt : 'transparent',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            transition: 'all 0.2s ease',
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+          onMouseEnter={e => {
+            if (!showForm) {
+              e.currentTarget.style.background = 'rgba(184,151,58,0.06)';
+              e.currentTarget.style.borderColor = 'rgba(184,151,58,0.55)';
+            }
+          }}
+          onMouseLeave={e => {
+            if (!showForm) {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.borderColor = 'rgba(184,151,58,0.35)';
+            }
           }}
         >
-          <div className="cc-section-top-line" />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: tokens.goldDim,
-                border: `1px solid ${tokens.borderGold}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <DollarSign style={{ width: 16, height: 16, color: tokens.gold }} />
-              </div>
-              <div>
-                <h1 style={{
-                  margin: 0,
-                  fontFamily: "'Cormorant Garamond', serif",
-                  fontWeight: 600,
-                  fontSize: 26,
-                  color: tokens.textPrimary,
-                  lineHeight: 1.1,
-                }}>Budget Tracker</h1>
-                <p style={{ margin: 0, fontSize: 12, color: tokens.textMuted, marginTop: 2 }}>
-                  Log transactions, manage auto-entries, and plan your budget.
-                </p>
-              </div>
-            </div>
-
-            <button
-              data-tutorial="btn-add-transaction"
-              onClick={() => setShowForm(!showForm)}
-              className={showForm ? 'cc-budget-btn-ghost' : 'cc-budget-btn-primary'}
-            >
-              <Plus style={{ width: 13, height: 13 }} />
-              {showForm ? 'Cancel' : 'Add Transaction'}
-            </button>
-          </div>
-        </motion.div>
+          <motion.div
+            animate={{ rotate: showForm ? 45 : 0 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              width: 22, height: 22, borderRadius: 6,
+              background: showForm ? 'rgba(184,151,58,0.15)' : tokens.goldDim,
+              border: `1px solid ${tokens.borderGold}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Plus style={{ width: 13, height: 13, color: tokens.gold }} />
+          </motion.div>
+          <span style={{
+            fontSize: 13,
+            fontWeight: 600,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            color: showForm ? tokens.textMuted : tokens.gold,
+          }}>
+            {showForm ? 'Cancel' : 'Add Transaction'}
+          </span>
+        </motion.button>
 
         {/* ── TRANSACTION FORM (animated) ────────────────────────────────── */}
         <AnimatePresence>
@@ -510,6 +574,36 @@ export default function Budget() {
 
         {/* ── MAIN GRID ──────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* 0. PREDICTED INCOME PANEL */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            style={{
+              borderRadius: 14,
+              background: tokens.surfaceAlt,
+              border: `1px solid ${tokens.borderGold}`,
+              overflow: "hidden",
+            }}
+          >
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "14px 18px 12px",
+              borderBottom: `1px solid ${tokens.border}`,
+            }}>
+              <TrendingUp style={{ width: 14, height: 14, color: tokens.gold }} />
+              <span style={{
+                fontSize: 11, fontWeight: 600, letterSpacing: "0.1em",
+                textTransform: "uppercase", color: tokens.textMuted,
+              }}>Predicted Monthly Income</span>
+            </div>
+            <PredictedIncomePanel
+              transactions={transactions}
+              autoList={profile?.auto_transactions || []}
+              profile={profile}
+            />
+          </motion.div>
 
           {/* 1. AUTO TRANSACTIONS */}
           <motion.div
@@ -601,16 +695,98 @@ export default function Budget() {
             style={{
               borderRadius: 14,
               background: tokens.surfaceAlt,
-              border: `1px solid ${tokens.border}`,
+              border: budgetSaved ? `1px solid ${tokens.gold}` : `1px solid ${tokens.border}`,
               overflow: 'hidden',
+              position: 'relative',
+              transition: 'border-color 0.4s ease, box-shadow 0.4s ease',
+              boxShadow: budgetSaved ? '0 0 32px rgba(184,151,58,0.18)' : 'none',
             }}
           >
+            {/* Saved flash overlay */}
+            <AnimatePresence>
+              {budgetSaved && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  style={{
+                    position: 'absolute', inset: 0, zIndex: 10,
+                    pointerEvents: 'none',
+                    borderRadius: 14,
+                    background: 'rgba(184,151,58,0.04)',
+                  }}
+                >
+                  {/* Shimmer line */}
+                  <motion.div
+                    initial={{ x: '-100%' }}
+                    animate={{ x: '120%' }}
+                    transition={{ duration: 0.9, ease: 'easeInOut' }}
+                    style={{
+                      position: 'absolute', top: 0, left: 0,
+                      width: '60%', height: '100%',
+                      background: 'linear-gradient(90deg, transparent, rgba(184,151,58,0.12), transparent)',
+                    }}
+                  />
+                  {/* Top glow line */}
+                  <motion.div
+                    initial={{ scaleX: 0, opacity: 0 }}
+                    animate={{ scaleX: 1, opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.45, ease: 'easeOut' }}
+                    style={{
+                      position: 'absolute', top: 0, left: 0, right: 0,
+                      height: 2,
+                      background: 'linear-gradient(90deg, transparent, #B8973A, transparent)',
+                      transformOrigin: 'center',
+                    }}
+                  />
+                  {/* Saved badge */}
+                  <motion.div
+                    initial={{ opacity: 0, y: -6, scale: 0.85 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -4, scale: 0.9 }}
+                    transition={{ delay: 0.1, duration: 0.3, type: 'spring', stiffness: 260 }}
+                    style={{
+                      position: 'absolute', top: 12, right: 16,
+                      background: 'rgba(184,151,58,0.15)',
+                      border: '1px solid rgba(184,151,58,0.4)',
+                      borderRadius: 99,
+                      padding: '4px 12px',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: '#B8973A',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      backdropFilter: 'blur(8px)',
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  >
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
+                    >✓</motion.span>
+                    Saved
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <div style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '14px 18px 12px',
               borderBottom: `1px solid ${tokens.border}`,
             }}>
-              <Calculator style={{ width: 14, height: 14, color: tokens.gold }} />
+              <motion.div
+                animate={budgetSaved ? { rotate: [0, -15, 15, -10, 10, 0] } : {}}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                <Calculator style={{ width: 14, height: 14, color: budgetSaved ? tokens.gold : tokens.gold }} />
+              </motion.div>
               <span style={{
                 fontSize: 11, fontWeight: 600, letterSpacing: '0.1em',
                 textTransform: 'uppercase', color: tokens.textMuted,
@@ -621,6 +797,17 @@ export default function Budget() {
 
         </div>
       </div>
+
+      {showOnboarding && (
+        <BudgetOnboarding
+          onComplete={handleOnboardingComplete}
+          onSalary={handleOnboardingSalary}
+          onOpenTransactionForm={() => {
+            setShowOnboarding(false);
+            setShowForm(true);
+          }}
+        />
+      )}
     </div>
   );
 }

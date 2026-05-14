@@ -23,10 +23,13 @@ import Leaderboard from './pages/Leaderboard';
 import Goals from './pages/Goals';
 import Clans from './pages/Clans';
 import StockMarket from './pages/StockMarket';
+import DayTrading from './pages/DayTrading';
 import Learn from './pages/Learn';
 import Customize from './pages/Customize';
 import Study from './pages/Study';
 import Diary from './pages/Diary';
+import Investments from './pages/Investments';
+import DayTrade from './pages/DayTrade';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isAuthenticated } = useAuth();
@@ -119,12 +122,15 @@ const AuthenticatedApp = () => {
           <Route path="/Goals" element={<Goals />} />
           <Route path="/Clans" element={<Clans />} />
           <Route path="/StockMarket" element={<StockMarket />} />
+          <Route path="/DayTrading" element={<DayTrading />} />
           <Route path="/Learn" element={<Learn />} />
           <Route path="/GoalGuide" element={<GoalGuide />} />
           <Route path="/Customize" element={<Customize />} />
           <Route path="/StockSense" element={<StockSense />} />
           <Route path="/Study" element={<Study />} />
           <Route path="/Diary" element={<Diary />} />
+           <Route path="/Investments" element={<Investments />} />
+            <Route path="/DayTrade" element={<DayTrade />} />
         </Route>
     
         <Route path="*" element={<PageNotFound />} />
