@@ -2112,7 +2112,7 @@ export default function CryptoPackOpener() {
         border: "1px solid rgba(201,168,76,0.3)", borderRadius: 12,
         padding: "10px 20px", marginBottom: 20,
       }}>
-        <span style={{ fontSize: 20 }}>🪙</span>
+        <span style={{ fontSize: 20 }}></span>
         <div style={{ textAlign: "center" }}>
           <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#c9a84c", letterSpacing: "-0.5px", lineHeight: 1 }}>
             {loadingCoins ? "..." : coins.toLocaleString()}
@@ -2121,7 +2121,7 @@ export default function CryptoPackOpener() {
             Coins Available
           </p>
         </div>
-        <span style={{ fontSize: 20 }}>🪙</span>
+        <span style={{ fontSize: 20 }}></span>
       </div>
       <div style={{ display: "flex", gap: 4, marginBottom: 32, borderBottom: "1px solid #222", alignItems: "center" }}>
         <button style={tabStyle("open")}       onClick={() => handleTabChange("open")}>Pack Opener</button>

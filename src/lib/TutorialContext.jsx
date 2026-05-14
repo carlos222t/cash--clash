@@ -52,7 +52,7 @@ export const TUTORIAL_STEPS = [
   },
   {
     id: 'friends-nav',
-    route: '/packs',
+    route: '/cryptopackopener',
     target: 'nav-friends',
     title:  'Pack Card',
     desc: 'You earn coins by logging transactions and leveling up. Spend them in the Pack Opener to collect cards of different rarities.',

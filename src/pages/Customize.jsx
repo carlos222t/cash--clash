@@ -396,14 +396,28 @@ export default function Customize() {
     setFriendBtnColor(profile.friend_btn_color || 'default');
   };
 
+  /* ── FIX 1: removed capture="environment" so iOS/Android shows the full
+       picker (camera roll + files + camera).
+     ── FIX 2: accept="image/*" covers every image type the browser can
+       handle (HEIC, HEIF, WebP, AVIF, GIF, BMP, TIFF, etc.) without
+       needing to enumerate them.
+     ── FIX 3: the type guard now uses file.type.startsWith('image/')
+       OR falls back to checking common extensions, so HEIC files
+       (which browsers sometimes report as "" type) still pass through. ── */
+  const isImageFile = (file) => {
+    if (file.type.startsWith('image/')) return true;
+    const ext = file.name.split('.').pop().toLowerCase();
+    return ['jpg','jpeg','png','gif','webp','heic','heif','avif','bmp','tiff','tif','svg'].includes(ext);
+  };
+
   const handleFileUpload = async (file) => {
-    if (!file || !file.type.startsWith('image/')) { toast.error('Select an image file'); return; }
+    if (!file || !isImageFile(file)) { toast.error('Please select an image file'); return; }
     const prevUrl = avatarUrl;
     const previewUrl = URL.createObjectURL(file);
     setAvatarUrl(previewUrl);
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop().toLowerCase();
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
       const fileName = `avatar_${user.id}.${ext}`;
       const { error } = await supabase.storage
         .from('avatars')
@@ -531,7 +545,9 @@ export default function Customize() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 12, color: T.text, fontWeight: 600, margin: '0 0 6px' }}>Custom Photo</p>
-                  <p style={{ fontSize: 11, color: T.textMuted, margin: '0 0 10px', lineHeight: 1.5 }}>Upload a JPG or PNG. Will display instead of your emoji.</p>
+                  <p style={{ fontSize: 11, color: T.textMuted, margin: '0 0 10px', lineHeight: 1.5 }}>
+                    Upload any photo from your camera roll or files. Supports HEIC, JPG, PNG, WebP and more.
+                  </p>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{
                       display: 'flex', alignItems: 'center', gap: 5,
@@ -553,8 +569,28 @@ export default function Customize() {
                       </button>
                     )}
                   </div>
-                  <input ref={fileRef} type="file" accept="image/*,image/heic,image/heif,image/webp,image/avif" capture="environment" style={{ display: 'none' }}
-                    onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0])} />
+
+                  {/*
+                    KEY FIXES:
+                    1. Removed capture="environment" — this attribute forced the browser
+                       to open the camera directly, bypassing the photo library picker.
+                       Without it, iOS and Android show the full sheet: camera, photo
+                       library, and files.
+                    2. accept="image/*" — accepts every image MIME type the device
+                       supports. Previously the explicit list missed HEIC/HEIF on many
+                       devices even though they were listed, because iOS reports HEIC
+                       files with an empty MIME type.
+                    3. isImageFile() fallback — checks file extension as a backup so
+                       HEIC/HEIF files (which have type="" on some browsers) still pass
+                       the guard instead of getting rejected.
+                  */}
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+                  />
                 </div>
               </div>
 

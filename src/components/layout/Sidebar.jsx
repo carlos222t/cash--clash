@@ -3,19 +3,21 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { notificationsApi } from '@/api/supabaseClient';
+import { notificationsApi, supabase } from '@/api/supabaseClient';
 import { useTutorial } from '@/lib/TutorialContext';
 import {
   LayoutDashboard, Wallet, Swords, Trophy, Settings,
   ChevronLeft, ChevronRight, LogOut, Zap, Users, Bell,
   Star, BookOpen, Target, Shield, TrendingUp, GraduationCap,
   Paintbrush, CreditCard, BarChart2, NotebookPen, ChevronDown,
+  Lock, Crown,
 } from 'lucide-react';
 
 const PRIMARY_NAV = [
   { path: '/Dashboard',  icon: LayoutDashboard, label: 'Dashboard', description: 'Your hub',       tutorialId: 'nav-dashboard' },
   { path: '/Budget',     icon: Wallet,          label: 'Budget',    description: 'Track money',    tutorialId: 'nav-budget' },
   { path: '/Challenges', icon: Swords,          label: 'Clash',     description: 'Battle friends', accent: true, tutorialId: 'nav-clash' },
+  { path: '/Packs',      icon: CreditCard,      label: 'Store',     description: 'Get packs',      tutorialId: null },
 ];
 
 const COMMUNITY_NAV = [
@@ -23,14 +25,13 @@ const COMMUNITY_NAV = [
   { path: '/Clans',       icon: Shield,  label: 'Clans',       tutorialId: null },
   { path: '/Friends',     icon: Users,   label: 'Friends',     tutorialId: 'nav-friends' },
   { path: '/Badges',      icon: Star,    label: 'Badges',      tutorialId: 'nav-badges' },
+  { path: '/Customize',   icon: Paintbrush,  label: 'Customize',   tutorialId: null },
 ];
 
 const EXPLORE_NAV = [
   { path: '/GoalGuide',   icon: Target,      label: 'Goal Guide',  tutorialId: null },
   { path: '/daytrade',    icon: TrendingUp,  label: 'Day Trading', tutorialId: null },
   { path: '/Investments', icon: BarChart2,   label: 'Investments', tutorialId: null },
-  { path: '/Packs',       icon: CreditCard,  label: 'Store',       tutorialId: null },
-  { path: '/Customize',   icon: Paintbrush,  label: 'Customize',   tutorialId: null },
   { path: '/Diary',       icon: NotebookPen, label: 'Diary',       tutorialId: null },
 ];
 
@@ -47,20 +48,23 @@ const T = {
   text:         '#F0EDE6',
   textMuted:    'rgba(240,237,230,0.4)',
   textDim:      'rgba(240,237,230,0.22)',
+  vip:          '#A78BFA',
+  vipDim:       'rgba(167,139,250,0.12)',
+  vipBorder:    'rgba(167,139,250,0.28)',
 };
 
-export default function Sidebar({ collapsed, setCollapsed }) {
+export default function Sidebar({ collapsed, setCollapsed, isVip = false }) {
   const location = useLocation();
   const { logout, user } = useAuth();
   const { start: startTutorial } = useTutorial();
 
-  // Track which sections are open
   const [communityOpen, setCommunityOpen] = useState(
     COMMUNITY_NAV.some(i => i.path === location.pathname)
   );
   const [exploreOpen, setExploreOpen] = useState(
-    EXPLORE_NAV.some(i => i.path === location.pathname)
+    isVip && EXPLORE_NAV.some(i => i.path === location.pathname)
   );
+  const [showVipNudge, setShowVipNudge] = useState(false);
 
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ['notif-count', user?.id],
@@ -68,6 +72,30 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     enabled: !!user?.id,
     refetchInterval: 30000,
   });
+
+  const { data: coinBalance = 0 } = useQuery({
+    queryKey: ['sidebar-coins', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('coins')
+        .eq('created_by', user.id)
+        .single();
+      if (error) throw error;
+      return data?.coins ?? 0;
+    },
+    enabled: !!user?.id,
+    refetchInterval: 30000,
+  });
+
+  const handleExploreToggle = () => {
+    if (!isVip) {
+      setShowVipNudge(true);
+      setTimeout(() => setShowVipNudge(false), 3000);
+      return;
+    }
+    setExploreOpen(o => !o);
+  };
 
   /* ── Individual nav link ── */
   const NavItem = ({ item, size = 'normal', indent = false }) => {
@@ -156,13 +184,91 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     );
   };
 
-  /* ── Collapsed tooltip items (icon-only with expand on click) ── */
-  const CollapsedSectionDivider = () => (
-    <div style={{ margin: '8px 0', height: 1, background: T.border }} />
-  );
+  /* ── VIP-locked Explore header ── */
+  const ExploreHeader = () => {
+    const hasActiveChild = EXPLORE_NAV.some(i => i.path === location.pathname);
+
+    if (collapsed) {
+      return <div style={{ margin: '8px 0', height: 1, background: T.border }} />;
+    }
+
+    return (
+      <div style={{ position: 'relative' }}>
+        <button
+          onClick={handleExploreToggle}
+          style={{
+            width: '100%',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 12px 4px',
+            background: 'transparent', border: 'none', cursor: isVip ? 'pointer' : 'not-allowed',
+            transition: 'all 0.15s',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{
+              fontSize: 9, fontWeight: 700, letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: !isVip ? T.textDim : hasActiveChild ? T.gold : T.textDim,
+              transition: 'color 0.15s',
+              opacity: isVip ? 1 : 0.5,
+            }}>
+              Explore
+            </span>
+            {!isVip ? (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 3,
+                background: T.vipDim, border: `1px solid ${T.vipBorder}`,
+                borderRadius: 99, padding: '1px 6px',
+              }}>
+                <Crown style={{ width: 8, height: 8, color: T.vip }} />
+                <span style={{ fontSize: 8, fontWeight: 700, color: T.vip, letterSpacing: '0.08em' }}>VIP</span>
+              </div>
+            ) : (
+              <ChevronDown style={{
+                width: 12, height: 12,
+                color: hasActiveChild ? T.gold : T.textDim,
+                transform: exploreOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+                transition: 'transform 0.2s ease, color 0.15s',
+              }} />
+            )}
+          </div>
+          {!isVip && (
+            <Lock style={{ width: 10, height: 10, color: T.vip, opacity: 0.6 }} />
+          )}
+        </button>
+
+        {/* VIP nudge toast */}
+        <AnimatePresence>
+          {showVipNudge && (
+            <motion.div
+              initial={{ opacity: 0, y: -6, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6, scale: 0.95 }}
+              transition={{ duration: 0.18 }}
+              style={{
+                position: 'absolute', left: 8, right: 8,
+                top: '100%', marginTop: 4, zIndex: 100,
+                background: '#1A1525',
+                border: `1px solid ${T.vipBorder}`,
+                borderRadius: 10, padding: '10px 12px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <Crown style={{ width: 13, height: 13, color: T.vip, flexShrink: 0 }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: T.vip }}>VIP Required</span>
+              </div>
+              <p style={{ fontSize: 10, color: T.textMuted, lineHeight: 1.4, margin: 0 }}>
+                Upgrade to VIP to unlock Goal Guide, Day Trading, Investments, Customize & Diary.
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
 
   const communityHasActive = COMMUNITY_NAV.some(i => i.path === location.pathname);
-  const exploreHasActive   = EXPLORE_NAV.some(i => i.path === location.pathname);
 
   const footerItem = (path, Icon, label, tutorialId, extraContent) => {
     const isActive = location.pathname === path;
@@ -212,6 +318,24 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         <div style={{ width: '100%', aspectRatio: '1 / 0.4', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           <img src="/cash.clash.png" alt="Cash Clash Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
         </div>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: 6, padding: collapsed ? '6px' : '6px 14px', borderRadius: 99,
+          background: T.goldDim, border: '1px solid ' + T.goldBorder,
+          width: '100%', boxSizing: 'border-box',
+          animation: 'coinPulse 3s ease-in-out infinite',
+        }}>
+          <span style={{
+            fontSize: 13, fontWeight: 800, color: T.gold,
+            display: 'inline-block',
+            animation: 'coinSpin 4s ease-in-out infinite',
+          }}>◈</span>
+          {collapsed ? null : (
+            <span style={{ fontSize: 12, fontWeight: 700, color: T.goldLight, letterSpacing: '0.03em' }}>
+              {coinBalance.toLocaleString()}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ── TUTORIAL BUTTON ── */}
@@ -237,11 +361,9 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       </div>
 
       {/* ── NAV ── */}
-      <nav
-        style={{ padding: '8px 8px 16px', display: 'flex', flexDirection: 'column', gap: 2 }}
-      >
+      <nav style={{ padding: '8px 8px 16px', display: 'flex', flexDirection: 'column', gap: 2 }}>
 
-        {/* Primary: always visible */}
+        {/* Primary: always visible — includes Packs/Store */}
         {PRIMARY_NAV.map(item => <NavItem key={item.path} item={item} size="large" />)}
 
         {/* ── COMMUNITY section ── */}
@@ -269,16 +391,11 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           )}
         </AnimatePresence>
 
-        {/* ── EXPLORE section ── */}
-        <SectionHeader
-          label="Explore"
-          isOpen={exploreOpen}
-          onToggle={() => setExploreOpen(o => !o)}
-          hasActiveChild={exploreHasActive}
-        />
+        {/* ── EXPLORE section (VIP-locked) ── */}
+        <ExploreHeader />
 
         <AnimatePresence initial={false}>
-          {(exploreOpen || collapsed) && (
+          {isVip && (exploreOpen || collapsed) && (
             <motion.div
               key="explore"
               initial={{ height: 0, opacity: 0 }}
@@ -293,6 +410,27 @@ export default function Sidebar({ collapsed, setCollapsed }) {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Locked preview for non-VIP (collapsed mode: just divider; expanded: ghost items) */}
+        {!isVip && !collapsed && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, opacity: 0.35, pointerEvents: 'none' }}>
+            {EXPLORE_NAV.map(item => (
+              <div
+                key={item.path}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '8px 12px', paddingLeft: 20,
+                  borderRadius: 10, color: T.textDim,
+                  filter: 'blur(0.5px)',
+                }}
+              >
+                <item.icon style={{ width: 17, height: 17, flexShrink: 0 }} />
+                <span style={{ fontSize: 13, fontWeight: 500 }}>{item.label}</span>
+                <Lock style={{ width: 10, height: 10, marginLeft: 'auto', flexShrink: 0 }} />
+              </div>
+            ))}
+          </div>
+        )}
 
       </nav>
 
