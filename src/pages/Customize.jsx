@@ -819,6 +819,68 @@ export default function Customize() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* ── Mobile save banner ── */}
+      <AnimatePresence>
+        {isDirty && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+            style={{
+              position: 'fixed', bottom: 24, left: 16, right: 16,
+              zIndex: 200,
+              background: '#1A1A1F',
+              border: '1px solid rgba(184,151,58,0.35)',
+              borderRadius: 16,
+              padding: '14px 16px',
+              display: 'flex', alignItems: 'center', gap: 12,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+            }}
+          >
+            <div style={{
+              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+              background: 'rgba(184,151,58,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Sparkles style={{ width: 16, height: 16, color: '#B8973A' }} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#F0EDE6', margin: 0 }}>Unsaved changes</p>
+              <p style={{ fontSize: 11, color: 'rgba(240,237,230,0.45)', margin: '2px 0 0' }}>Tap Save to apply your updates</p>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              <button
+                onClick={handleReset}
+                style={{
+                  padding: '8px 12px', borderRadius: 9,
+                  background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'rgba(240,237,230,0.45)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                Discard
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{
+                  padding: '8px 16px', borderRadius: 9, border: 'none',
+                  background: saving ? 'rgba(184,151,58,0.4)' : 'linear-gradient(135deg, #B8973A, #D4AF5A)',
+                  color: '#0C0C0E', fontSize: 12, fontWeight: 700,
+                  cursor: saving ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                {saving && (
+                  <div style={{ width: 12, height: 12, border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#0C0C0E', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                )}
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1356,10 +1356,9 @@ function OwnerProofReviewTab({ challenges, onAccept, onReject }) {
                   onClick={() => onAccept(challenge, taskIndex, userId)}
                   style={{
                     flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    padding: '10px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    padding: '10px', borderRadius: 10, border: '1px solid rgba(126,184,138,0.3)', cursor: 'pointer',
                     background: T.successDim, color: T.success,
                     fontSize: 12, fontWeight: 700, transition: 'all 0.15s',
-                    border: '1px solid rgba(126,184,138,0.3)',
                   }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(126,184,138,0.22)'}
                   onMouseLeave={e => e.currentTarget.style.background = T.successDim}

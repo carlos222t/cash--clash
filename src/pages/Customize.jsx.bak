@@ -375,6 +375,9 @@ export default function Customize() {
       });
       setProfile(prev => ({ ...prev, display_name: displayName, bio, avatar_id: avatarEmoji, custom_avatar_url: avatarUrl, banner_color: colorId, card_bg_color: cardBgColor, challenge_btn_color: challengeBtnColor, friend_btn_color: friendBtnColor }));
       queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.refetchQueries({ queryKey: ['leaderboard'] });
+      queryClient.invalidateQueries({ queryKey: ['friend-profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-profiles'] });
       toast.success('Profile saved!');
     } catch(e) {
       toast.error('Failed to save — try again');
@@ -393,21 +396,36 @@ export default function Customize() {
     setFriendBtnColor(profile.friend_btn_color || 'default');
   };
 
+
+  const isImageFile = (file) => {
+    if (file.type.startsWith('image/')) return true;
+    const ext = file.name.split('.').pop().toLowerCase();
+    return ['jpg','jpeg','png','gif','webp','heic','heif','avif','bmp','tiff','tif','svg'].includes(ext);
+  };
+
   const handleFileUpload = async (file) => {
-    if (!file || !file.type.startsWith('image/')) { toast.error('Select an image file'); return; }
+    if (!file || !isImageFile(file)) { toast.error('Please select an image file'); return; }
+    const prevUrl = avatarUrl;
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarUrl(previewUrl);
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop();
-      const fileName = `avatar_${user.id}_${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from('avatars').upload(fileName, file, { upsert: true });
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const fileName = `avatar_${user.id}.${ext}`;
+      const { error } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true, cacheControl: '3600' });
       if (error) throw error;
       const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
-      setAvatarUrl(data.publicUrl);
+      const persistentUrl = `${data.publicUrl}?t=${Date.now()}`;
+      URL.revokeObjectURL(previewUrl);
+      setAvatarUrl(persistentUrl);
       toast.success('Photo uploaded!');
     } catch(e) {
-      const obj = URL.createObjectURL(file);
-      setAvatarUrl(obj);
-      toast.success('Photo ready.');
+      URL.revokeObjectURL(previewUrl);
+      setAvatarUrl(prevUrl);
+      console.error('Avatar upload failed:', e);
+      toast.error('Upload failed. Please try again.');
     } finally { setUploading(false); }
   };
 
@@ -427,6 +445,11 @@ export default function Customize() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse-gold { 0%,100% { box-shadow: 0 0 0 0 rgba(184,151,58,0.3); } 50% { box-shadow: 0 0 0 6px rgba(184,151,58,0); } }
         ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
+        @media (max-width: 640px) {
+          .customize-grid { display: flex !important; flex-direction: column !important; }
+          .customize-preview { position: static !important; order: -1; }
+          .customize-forms { order: 1; }
+        }
       `}</style>
 
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
@@ -480,10 +503,10 @@ export default function Customize() {
         </motion.div>
 
         {/* ── Two-column layout ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
+        <div className="customize-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
 
           {/* LEFT: forms */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="customize-forms" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
             {/* Identity */}
             <Section icon={User} title="Identity">
@@ -515,7 +538,9 @@ export default function Customize() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 12, color: T.text, fontWeight: 600, margin: '0 0 6px' }}>Custom Photo</p>
-                  <p style={{ fontSize: 11, color: T.textMuted, margin: '0 0 10px', lineHeight: 1.5 }}>Upload a JPG or PNG. Will display instead of your emoji.</p>
+                  <p style={{ fontSize: 11, color: T.textMuted, margin: '0 0 10px', lineHeight: 1.5 }}>
+                    Upload any photo from your camera roll or files. Supports HEIC, JPG, PNG, WebP and more.
+                  </p>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{
                       display: 'flex', alignItems: 'center', gap: 5,
@@ -537,8 +562,28 @@ export default function Customize() {
                       </button>
                     )}
                   </div>
-                  <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
-                    onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0])} />
+
+                  {/*
+                    KEY FIXES:
+                    1. Removed capture="environment" — this attribute forced the browser
+                       to open the camera directly, bypassing the photo library picker.
+                       Without it, iOS and Android show the full sheet: camera, photo
+                       library, and files.
+                    2. accept="image/*" — accepts every image MIME type the device
+                       supports. Previously the explicit list missed HEIC/HEIF on many
+                       devices even though they were listed, because iOS reports HEIC
+                       files with an empty MIME type.
+                    3. isImageFile() fallback — checks file extension as a backup so
+                       HEIC/HEIF files (which have type="" on some browsers) still pass
+                       the guard instead of getting rejected.
+                  */}
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
+                  />
                 </div>
               </div>
 
@@ -673,7 +718,7 @@ export default function Customize() {
           </div>
 
           {/* RIGHT: live preview (sticky) */}
-          <div style={{ position: 'sticky', top: 24 }}>
+          <div className="customize-preview" style={{ position: 'sticky', top: 24 }}>
             <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
               <div style={{ marginBottom: 10 }}>
                 <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: T.textMuted, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -735,7 +780,69 @@ export default function Customize() {
         </div>
       </div>
 
-      {/* ── Mobile preview modal ── */}
+
+      {/* ── Mobile save banner ── */}
+      <AnimatePresence>
+        {isDirty && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+            style={{
+              position: 'fixed', bottom: 24, left: 16, right: 16,
+              zIndex: 200,
+              background: '#1A1A1F',
+              border: '1px solid rgba(184,151,58,0.35)',
+              borderRadius: 16,
+              padding: '14px 16px',
+              display: 'flex', alignItems: 'center', gap: 12,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(184,151,58,0.1)',
+            }}
+          >
+            <div style={{
+              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+              background: 'rgba(184,151,58,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Sparkles style={{ width: 16, height: 16, color: '#B8973A' }} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#F0EDE6', margin: 0 }}>Unsaved changes</p>
+              <p style={{ fontSize: 11, color: 'rgba(240,237,230,0.45)', margin: '2px 0 0' }}>Tap Save to apply your updates</p>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              <button
+                onClick={handleReset}
+                style={{
+                  padding: '8px 12px', borderRadius: 9,
+                  background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'rgba(240,237,230,0.45)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                Discard
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{
+                  padding: '8px 16px', borderRadius: 9, border: 'none',
+                  background: saving ? 'rgba(184,151,58,0.4)' : 'linear-gradient(135deg, #B8973A, #D4AF5A)',
+                  color: '#0C0C0E', fontSize: 12, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                {saving
+                  ? <div style={{ width: 12, height: 12, border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#0C0C0E', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                  : null}
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Mobile preview modal ── */
       <AnimatePresence>
         {previewOpen && (
           <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
